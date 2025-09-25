@@ -5,6 +5,11 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 exclude = ["ENV*", "tests*"]
 
+[tool.setuptools.package-data]
+"tempdd.core" = ["*.json"]
+"tempdd.core.templates" = ["*.md"]
+"tempdd.integrations.claudecode.commands" = ["*.md"]
+
 [project]
 name = "tempdd"
 version = "0.1.0"

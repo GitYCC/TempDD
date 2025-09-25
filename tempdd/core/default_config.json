@@ -1,0 +1,13 @@
+{
+  "language": "en",
+  "stages": ["prd", "arch", "research", "blueprint", "tasks"],
+  "controller": "controller_default",
+  "templates": {
+    "prd": "template_prd_default",
+    "arch": "template_arch_default",
+    "research": "template_research_default",
+    "blueprint": "template_blueprint_default",
+    "tasks": "template_tasks_default"
+  },
+  "controller_state": {}
+}

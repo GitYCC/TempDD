@@ -5,11 +5,13 @@ import json
 import importlib
 import logging
 from pathlib import Path
+from tempdd.file_manager import FileManager
 
 
 # AI Instruction Templates
 AI_INSTRUCTION_START = "[AI_INSTRUCTION_START]"
 AI_INSTRUCTION_END = "[AI_INSTRUCTION_END]"
+
 
 def format_ai_instruction(content: str) -> str:
     """Format content as AI instruction with start/end markers."""
@@ -32,21 +34,23 @@ def _load_controller(config_path: str = None):
         FileNotFoundError: When configuration file is not found
         ImportError: When controller module cannot be imported
     """
-    work_dir = Path.cwd()
+    file_manager = FileManager()
 
     if config_path:
         config_file = Path(config_path)
     else:
-        config_file = work_dir / ".tempdd" / "config.json"
+        config_file = file_manager.get_project_config_path()
 
     if config_file.exists():
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
     else:
         # Fallback to default config
-        default_config_path = Path(__file__).parent.parent / "core" / "configs" / "config_default.json"
+        default_config_path = (
+            Path(__file__).parent.parent / "core" / "configs" / "config_default.json"
+        )
         if default_config_path.exists():
-            with open(default_config_path, 'r', encoding='utf-8') as f:
+            with open(default_config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
         else:
             raise FileNotFoundError("No configuration file found")
@@ -79,7 +83,9 @@ def ai_command(command_str: str) -> int:
         parts = command_str.strip().split()
         if len(parts) != 2:
             logger = logging.getLogger(__name__)
-            logger.error(f"Invalid command format. Expected 'stage action', got: '{command_str}'")
+            logger.error(
+                f"Invalid command format. Expected 'stage action', got: '{command_str}'"
+            )
             logger.info("Examples: 'prd build', 'arch run'")
             return 1
 
@@ -98,7 +104,9 @@ def ai_command(command_str: str) -> int:
 
     except FileNotFoundError as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"A required file was not found. Please check your configuration and templates.\nDetails: {e}")
+        logger.error(
+            f"A required file was not found. Please check your configuration and templates.\nDetails: {e}"
+        )
         return 1
     except ValueError as e:
         logger = logging.getLogger(__name__)

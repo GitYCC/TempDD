@@ -3,6 +3,7 @@
 import logging
 import json
 from pathlib import Path
+from tempdd.file_manager import FileManager
 
 
 def help_command() -> int:
@@ -16,27 +17,32 @@ def help_command() -> int:
 
     try:
         # Try to load configuration to get controller type
-        work_dir = Path.cwd()
-        config_file = work_dir / ".tempdd" / "config.json"
+        file_manager = FileManager()
+        config_file = file_manager.get_project_config_path()
 
         if config_file.exists():
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config = json.load(f)
         else:
             # Fallback to default config
-            default_config_path = Path(__file__).parent.parent / "core" / "configs" / "config_default.json"
-            with open(default_config_path, 'r', encoding='utf-8') as f:
+            default_config_path = (
+                Path(__file__).parent.parent
+                / "core"
+                / "configs"
+                / "config_default.json"
+            )
+            with open(default_config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
         # Get controller type and dynamically import
         controller_type = config.get("controller", "controller_default")
 
         try:
-            if controller_type == "controller_default":
-                from tempdd.core.controllers.controller_default import Controller
-            else:
-                # Handle other controller types if needed
-                from tempdd.core.controllers.controller_default import Controller
+            # Dynamically import controller based on type
+            module_name = f"tempdd.core.controllers.{controller_type}"
+            import importlib
+            controller_module = importlib.import_module(module_name)
+            Controller = controller_module.Controller
 
             controller = Controller()
             help_content = controller.get_help_content()

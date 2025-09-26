@@ -2,35 +2,25 @@
 
 from pathlib import Path
 import json
-import shutil
 import logging
-import glob
 from tempdd.utils import load_config as load_existing_config, process_template
+from tempdd.file_manager import FileManager
 
-COLOR_GRAY = '\033[90m'
-COLOR_YELLOW = '\033[93m'
-COLOR_END = '\033[0m'
-
-
-def get_core_path() -> Path:
-    """Get the core directory path."""
-    return Path(__file__).parent.parent / "core"
-
-
-def get_tools_path() -> Path:
-    """Get the integrations directory path."""
-    return Path(__file__).parent.parent / "integrations"
+COLOR_GRAY = "\033[90m"
+COLOR_YELLOW = "\033[93m"
+COLOR_END = "\033[0m"
 
 
 def get_available_configs() -> list[tuple[str, dict]]:
     """Get available configuration files with their metadata."""
-    configs_dir = get_core_path() / "configs"
+    file_manager = FileManager()
+    configs_dir = file_manager.get_core_path() / "configs"
     config_files = []
 
     for config_file in configs_dir.glob("config_*.json"):
         config_name = config_file.stem.replace("config_", "")
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 config_data = json.load(f)
             config_files.append((config_name, config_data))
         except (json.JSONDecodeError, FileNotFoundError):
@@ -75,9 +65,15 @@ def prompt_config_selection() -> str:
 
 def prompt_platform_selection() -> str:
     """Interactive prompt for platform selection."""
+    file_manager = FileManager()
+    available_tools = file_manager.list_available_integrations()
+
+    if not available_tools:
+        print("No integration tools available.")
+        return None
+
     platforms = [
-        ("claudecode", "Claude Code"),
-        ("geminicli", "Gemini CLI"),
+        (tool, file_manager.INTEGRATION_CONFIGS[tool].name) for tool in available_tools
     ]
 
     print("\nSelect target platform:")
@@ -89,9 +85,11 @@ def prompt_platform_selection() -> str:
             if len(platforms) == 1:
                 choice = input(f"Enter choice (1, default: 1): ").strip()
             else:
-                choice = input(f"Enter choice (1-{len(platforms)}, default: 1): ").strip()
+                choice = input(
+                    f"Enter choice (1-{len(platforms)}, default: 1): "
+                ).strip()
             if not choice:
-                return platforms[0][0]  # Default to Claude Code
+                return platforms[0][0]  # Default to first available
 
             choice_num = int(choice)
             if 1 <= choice_num <= len(platforms):
@@ -120,106 +118,45 @@ def prompt_language_input() -> str:
 
 def load_default_or_custom_config(config_path: str = None) -> dict:
     """Load configuration file, using default if not specified."""
+    file_manager = FileManager()
+
     if config_path:
-        if '/' in config_path:
+        if "/" in config_path:
             # It's a file path - must have .json extension
-            if not config_path.endswith('.json'):
-                raise ValueError(f"Config file path must have .json extension: {config_path}")
+            if not config_path.endswith(".json"):
+                raise ValueError(
+                    f"Config file path must have .json extension: {config_path}"
+                )
             config_file = Path(config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_path}")
-        elif config_path.endswith('.json'):
+        elif config_path.endswith(".json"):
             # It's a .json file in current directory
             config_file = Path(config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_path}")
         else:
             # Use as config name from configs directory
-            config_file = get_core_path() / "configs" / f"config_{config_path}.json"
+            config_file = file_manager.get_config_path(config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_file}")
     else:
         # Use default config
-        config_file = get_core_path() / "configs" / "config_default.json"
+        config_file = file_manager.get_default_config_path()
         if not config_file.exists():
             raise FileNotFoundError(f"Default config file not found: {config_file}")
 
-    with open(config_file, 'r', encoding='utf-8') as f:
+    with open(config_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def create_directory_structure(base_path: Path, force: bool = False) -> None:
-    """Create the basic TempDD directory structure."""
-    directories = [
-        ".claude/commands",
-        ".tempdd/templates",
-    ]
-
-    logger = logging.getLogger(__name__)
-    for dir_path in directories:
-        full_path = base_path / dir_path
-        if full_path.exists() and not force:
-            logger.info(f"Directory {dir_path} already exists, skipping...")
-            continue
-        full_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Created directory: {dir_path}")
-
-
-
-def create_tool_integration(base_path: Path, tool: str = "claudecode", force: bool = False) -> None:
-    """Create tool integration files."""
-    commands_path = base_path / ".claude" / "commands"
-
-    # Get the source command file from tools directory
-    tools_path = get_tools_path() / tool / "commands"
-    source_file = tools_path / "tempdd.md"
-
-    logger = logging.getLogger(__name__)
-    if not source_file.exists():
-        logger.warning(f"Tool integration not found for '{tool}': {source_file}")
-        return
-
-    target_file = commands_path / "tempdd.md"
-    if target_file.exists() and not force:
-        logger.info(f"{tool.title()} integration already exists, skipping...")
-        return
-
-    shutil.copy2(source_file, target_file)
-    logger.info(f"Created {tool} integration: .claude/commands/tempdd.md")
-
-
-def copy_templates_from_config(base_path: Path, config: dict, force: bool = False) -> None:
-    """Copy template files based on configuration with new naming convention."""
-    target_dir = base_path / ".tempdd" / "templates"
-    source_dir = get_core_path() / "templates"
-
-    logger = logging.getLogger(__name__)
-    logger.info("Creating templates from configuration...")
-
-    # Get templates from config
-    templates = config.get("templates", {})
-
-    for stage, template_name in templates.items():
-        source_file = source_dir / f"{template_name}.md"
-        target_file = target_dir / f"template_{stage}.md"
-
-        # Skip if target exists and force is False
-        if target_file.exists() and not force:
-            logger.info(f"Template template_{stage}.md already exists, skipping...")
-            continue
-
-        # Skip if source doesn't exist
-        if not source_file.exists():
-            logger.warning(f"Source template not found: {source_file}")
-            continue
-
-        # Copy template content directly
-        content = source_file.read_text(encoding='utf-8')
-        target_file.write_text(content, encoding='utf-8')
-        logger.info(f"Created template: .tempdd/templates/template_{stage}.md")
-
-
-def init_command(force: bool = False, tool: str = None, language: str = None, config_path: str = None, interactive: bool = True) -> int:
+def init_command(
+    force: bool = False,
+    tool: str = None,
+    language: str = None,
+    config_path: str = None,
+    interactive: bool = True,
+) -> int:
     """Initialize a new TempDD project."""
     logger = logging.getLogger(__name__)
     current_path = Path.cwd()
@@ -247,7 +184,7 @@ def init_command(force: bool = False, tool: str = None, language: str = None, co
     if config_path is None:
         config_path = "default"
     if tool is None:
-        tool = "claudecode"
+        tool = "claude"
     if language is None:
         language = "en"
 
@@ -263,29 +200,73 @@ def init_command(force: bool = False, tool: str = None, language: str = None, co
         if language:
             config["language"] = language
 
-        # 2. Create basic directory structure
-        create_directory_structure(current_path, force)
+        # 2. Create basic directory structure and initialize project
+        file_manager = FileManager(current_path)
+        file_manager.create_directory_structure(tool, force)
 
         # 3. Write config to ./.tempdd/config.json
-        target_config_path = current_path / ".tempdd" / "config.json"
+        target_config_path = file_manager.get_project_config_path()
         if target_config_path.exists() and not force:
-            logger.info(f"Config file already exists at {target_config_path}, skipping...")
+            logger.info(
+                f"Config file already exists at {target_config_path}, skipping..."
+            )
         else:
-            with open(target_config_path, 'w', encoding='utf-8') as f:
+            with open(target_config_path, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
             logger.info(f"Created config file: .tempdd/config.json")
 
         # 4. Copy templates with new naming convention (template_{stage}.md)
-        copy_templates_from_config(current_path, config, force)
+        file_manager.copy_templates_from_config(config, force)
 
         # 5. Create tool integration
-        create_tool_integration(current_path, tool, force)
+        file_manager.copy_integration_file(tool, force)
 
         print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
         print(COLOR_YELLOW + "Next steps:" + COLOR_END)
-        if tool == 'claudecode':
-            print(COLOR_YELLOW + "1. Execute `claude` to start Claude Code" + COLOR_END)
-            print(COLOR_YELLOW + "2. Use '/tempdd help' command in Claude Code to learn how to use the current flow." + COLOR_END)
+
+        file_manager = FileManager()
+        config = file_manager.INTEGRATION_CONFIGS.get(tool)
+        if config:
+            if tool == "claude":
+                print(
+                    COLOR_YELLOW
+                    + "1. Execute `claude` to start Claude Code"
+                    + COLOR_END
+                )
+                print(
+                    COLOR_YELLOW
+                    + "2. Use '/tempdd help' command in Claude Code to learn how to use the current flow."
+                    + COLOR_END
+                )
+            elif tool == "gemini":
+                print(
+                    COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END
+                )
+                print(
+                    COLOR_YELLOW
+                    + "2. Use '/tempdd help' command in Gemini CLI to learn how to use the current flow."
+                    + COLOR_END
+                )
+            elif tool == "cursor":
+                print(
+                    COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END
+                )
+                print(
+                    COLOR_YELLOW
+                    + "2. Use 'Ctrl+K' then '/tempdd help' to learn how to use the current flow."
+                    + COLOR_END
+                )
+            elif tool == "copilot":
+                print(
+                    COLOR_YELLOW
+                    + "1. Open project in your IDE with GitHub Copilot installed"
+                    + COLOR_END
+                )
+                print(
+                    COLOR_YELLOW
+                    + "2. Use '#tempdd help' in your prompt to learn how to use the current flow."
+                    + COLOR_END
+                )
         print("")
         return 0
 

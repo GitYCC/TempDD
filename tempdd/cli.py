@@ -4,12 +4,12 @@ import argparse
 import json
 import logging
 import sys
-from pathlib import Path
 
 from . import __version__
 from tempdd.handlers.init import init_command
 from tempdd.handlers.ai import ai_command
 from tempdd.handlers.help import help_command
+from tempdd.file_manager import FileManager
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -24,54 +24,43 @@ Examples:
   tempdd ai "prd build"          # Build PRD document
   tempdd ai "arch continue"      # Continue architecture document
   tempdd ai "task run"           # Run task document
-        """
+        """,
     )
 
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"TempDD {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"TempDD {__version__}")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Init command
-    init_parser = subparsers.add_parser(
-        "init",
-        help="Initialize a new TempDD project"
-    )
+    init_parser = subparsers.add_parser("init", help="Initialize a new TempDD project")
     init_parser.add_argument(
         "--force",
         action="store_true",
-        help="Force initialization even if files already exist"
+        help="Force initialization even if files already exist",
     )
     init_parser.add_argument(
         "--tool",
-        help="Target tool for integration (if not specified, will prompt interactively)"
+        help="Target tool for integration (if not specified, will prompt interactively)",
     )
     init_parser.add_argument(
         "--language",
-        help="Language setting (if not specified, will prompt interactively)"
+        help="Language setting (if not specified, will prompt interactively)",
     )
     init_parser.add_argument(
         "--config",
-        help="Path to configuration file (if not specified, will prompt interactively)"
+        help="Path to configuration file (if not specified, will prompt interactively)",
     )
 
     # AI command (replaces preprocess and agent)
-    ai_parser = subparsers.add_parser(
-        "ai",
-        help="Process stage with specified action"
-    )
+    ai_parser = subparsers.add_parser("ai", help="Process stage with specified action")
     ai_parser.add_argument(
         "stage_action",
-        help="Stage and action in format 'stage action' (e.g., 'prd build', 'arch continue')"
+        help="Stage and action in format 'stage action' (e.g., 'prd build', 'arch continue')",
     )
 
     # Help command
     help_parser = subparsers.add_parser(
-        "help",
-        help="Show help information about TempDD workflow"
+        "help", help="Show help information about TempDD workflow"
     )
 
     return parser
@@ -80,15 +69,17 @@ Examples:
 def _get_logging_level_from_config() -> int:
     """Get logging level from configuration."""
     try:
+        file_manager = FileManager()
+
         # Try to load project config first
-        config_file = Path.cwd() / ".tempdd" / "config.json"
-        if config_file.exists():
-            with open(config_file, 'r', encoding='utf-8') as f:
+        project_config_path = file_manager.get_project_config_path()
+        if project_config_path.exists():
+            with open(project_config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
         else:
             # Fallback to default config
-            default_config_path = Path(__file__).parent / "core" / "configs" / "config_default.json"
-            with open(default_config_path, 'r', encoding='utf-8') as f:
+            default_config_path = file_manager.get_default_config_path()
+            with open(default_config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
         level_str = config.get("logging_level", "WARNING").upper()
@@ -104,8 +95,8 @@ def main() -> int:
     logging_level = _get_logging_level_from_config()
     logging.basicConfig(
         level=logging_level,
-        format='%(levelname)s: %(message)s',
-        handlers=[logging.StreamHandler()]
+        format="%(levelname)s: %(message)s",
+        handlers=[logging.StreamHandler()],
     )
 
     parser = create_parser()
@@ -118,10 +109,10 @@ def main() -> int:
     try:
         if args.command == "init":
             return init_command(
-                force=getattr(args, 'force', False),
-                tool=getattr(args, 'tool', None),
-                language=getattr(args, 'language', None),
-                config_path=getattr(args, 'config', None)
+                force=getattr(args, "force", False),
+                tool=getattr(args, "tool", None),
+                language=getattr(args, "language", None),
+                config_path=getattr(args, "config", None),
             )
         elif args.command == "ai":
             return ai_command(args.stage_action)

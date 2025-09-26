@@ -3,16 +3,20 @@
 import json
 from pathlib import Path
 from typing import Tuple
+from tempdd.file_manager import FileManager
 
 
 def load_config() -> dict:
     """Load the TempDD configuration file."""
-    config_path = Path.cwd() / ".tempdd" / "config.json"
+    file_manager = FileManager()
+    config_path = file_manager.get_project_config_path()
 
     if not config_path.exists():
-        raise FileNotFoundError(f"TempDD configuration not found: {config_path}. Please run 'tempdd init' first.")
+        raise FileNotFoundError(
+            f"TempDD configuration not found: {config_path}. Please run 'tempdd init' first."
+        )
 
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -31,8 +35,6 @@ def validate_stage(stage: str, config: dict) -> Tuple[bool, str]:
         return True, ""
     else:
         return False, f"Stage '{stage}' not found in configuration"
-
-
 
 
 def process_template(template_content: str, context: dict) -> str:

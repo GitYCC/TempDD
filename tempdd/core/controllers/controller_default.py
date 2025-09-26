@@ -1,4 +1,3 @@
-
 """
 TempDD Controller
 
@@ -11,7 +10,12 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from tempdd.utils import process_template
-from tempdd.template_parser import parse_template, get_action_prompt, process_template_variables
+from tempdd.template_parser import (
+    parse_template,
+    get_action_prompt,
+    process_template_variables,
+)
+from tempdd.file_manager import FileManager
 
 
 class Controller:
@@ -27,7 +31,7 @@ class Controller:
 
     # Constants
     DEFAULT_DOCS_DIR = "docs-for-works"
-    DIR_NAME_PATTERN = r'^\d{3}_'
+    DIR_NAME_PATTERN = r"^\d{3}_"
     INITIALIZATION_SUFFIX = "initialization"
     FEATURE_SUFFIX = "feature"
 
@@ -39,6 +43,42 @@ Target Document: {target_document}
 
 Please proceed with the {action} operation for {stage} stage.
 Follow the guidelines and update the target document accordingly."""
+
+    SYSTEM_PROMPT_TEMPLATE = """
+**Gobal Rules**:
+**RULE1:** You MUST use "{language}" as your preferred language for following conversation and documentation. However, use English for code (including comments) and web search queries.
+"""
+
+    HELP_CONTENT_TEMPLATE = """{system_prompt}
+
+== TempDD Workflow ==
+
+Language: {language}
+Available Stages: {stages}
+
+Workflow:
+1. PRD (Product Requirements Document)
+   - Use '/tempdd prd build' to create product requirements
+
+2. Architecture Document
+   - Use '/tempdd arch build' to design system architecture
+
+3. Research Document
+   - Use '/tempdd research build' to conduct technical research
+
+4. Blueprint Document
+   - Use '/tempdd blueprint build' to create detailed implementation blueprint
+
+5. Tasks Document & Implementation
+   - Use '/tempdd tasks build' to break down implementation tasks
+   - Use '/tempdd tasks run' to implement the planned tasks
+
+Stage Actions:
+  build - Create/build the document for the stage
+  run   - Execute the implementation (for tasks stage)
+
+Each stage builds upon the previous one, creating a structured development workflow from requirements to implementation.
+"""
 
     def __init__(self, config_path: Optional[str] = None):
         """
@@ -56,19 +96,21 @@ Follow the guidelines and update the target document accordingly."""
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration file"""
         # First try to load project config
+        file_manager = FileManager(self.work_dir)
+
         if self.config_path:
             config_file = Path(self.config_path)
         else:
-            config_file = self.work_dir / ".tempdd" / "config.json"
+            config_file = file_manager.get_project_config_path()
 
         if config_file.exists():
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 return json.load(f)
 
         # Fallback to default config
-        default_config_path = Path(__file__).parent.parent / "configs" / "config_default.json"
+        default_config_path = file_manager.get_default_config_path()
         if default_config_path.exists():
-            with open(default_config_path, 'r', encoding='utf-8') as f:
+            with open(default_config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
 
         raise FileNotFoundError("No configuration file found")
@@ -99,9 +141,11 @@ Follow the guidelines and update the target document accordingly."""
         action_prompt = get_action_prompt(metadata, action)
 
         language_str = self.config.get("language", "en").upper()
-        ai_instruction = self._generate_ai_instruction(stage, action, language_str, target_document, action_prompt)
+        ai_instruction = self._generate_ai_instruction(
+            stage, action, language_str, target_document, action_prompt
+        )
 
-        if action == 'build':
+        if action == "build":
             self._save_target_document(target_document, template_content, target_dir)
 
         return ai_instruction
@@ -128,7 +172,7 @@ Follow the guidelines and update the target document accordingly."""
 
     def _get_target_directory(self, docs_dir: Path, stage: str) -> Path:
         """Get or create target directory for the stage"""
-        if stage == 'prd':
+        if stage == "prd":
             return self._create_prd_directory(docs_dir)
         else:
             return self._get_latest_directory(docs_dir)
@@ -151,25 +195,28 @@ Follow the guidelines and update the target document accordingly."""
     def _get_latest_directory(self, docs_dir: Path) -> Path:
         """Get the most recent numbered directory"""
         existing_dirs = sorted(
-            self._get_existing_numbered_dirs(docs_dir),
-            key=lambda d: d.name
+            self._get_existing_numbered_dirs(docs_dir), key=lambda d: d.name
         )
 
         if not existing_dirs:
-            raise FileNotFoundError("No existing directories found. Please run 'prd' stage first.")
+            raise FileNotFoundError(
+                "No existing directories found. Please run 'prd' stage first."
+            )
 
         return existing_dirs[-1]
 
     def _get_existing_numbered_dirs(self, docs_dir: Path) -> list[Path]:
         """Get all existing numbered directories"""
         return [
-            d for d in docs_dir.iterdir()
+            d
+            for d in docs_dir.iterdir()
             if d.is_dir() and re.match(self.DIR_NAME_PATTERN, d.name)
         ]
 
     def _get_template_path(self, stage: str) -> Path:
         """Get template file path for the stage"""
-        template_path = self.work_dir / ".tempdd" / "templates" / f"template_{stage}.md"
+        file_manager = FileManager(self.work_dir)
+        template_path = file_manager.get_template_path(stage)
         if not template_path.exists():
             raise FileNotFoundError(f"Template not found for stage: {stage}")
         return template_path
@@ -181,57 +228,80 @@ Follow the guidelines and update the target document accordingly."""
         except (FileNotFoundError, ValueError) as e:
             raise FileNotFoundError(f"Failed to parse template for stage {stage}: {e}")
 
-    def _save_target_document(self, target_document: str, template_content: str, target_dir: Path) -> None:
+    def _save_target_document(
+        self, target_document: str, template_content: str, target_dir: Path
+    ) -> None:
         """Save the target document with processed template content"""
         target_content = self._fill_in_template_content(template_content, target_dir)
-        with open(target_document, 'w', encoding='utf-8') as f:
+        with open(target_document, "w", encoding="utf-8") as f:
             f.write(target_content)
 
     def _fill_in_template_content(self, template_content, target_dir):
         context = {
-            'PATH_PRD': str(target_dir / "prd.md"),
-            'PATH_ARCH': str(target_dir / "arch.md"),
-            'PATH_RESEARCH': str(target_dir / "research.md"),
-            'PATH_BLUEPRINT': str(target_dir / "blueprint.md"),
+            "PATH_PRD": str(target_dir / "prd.md"),
+            "PATH_ARCH": str(target_dir / "arch.md"),
+            "PATH_RESEARCH": str(target_dir / "research.md"),
+            "PATH_BLUEPRINT": str(target_dir / "blueprint.md"),
         }
         processed_content = process_template(template_content, context)
         return processed_content
 
     def _template_exists(self, stage: str) -> bool:
         """Check if template exists for the given stage"""
-        template_path = self.work_dir / ".tempdd" / "templates" / f"template_{stage}.md"
+        file_manager = FileManager(self.work_dir)
+        template_path = file_manager.get_template_path(stage)
         return template_path.exists()
 
-    def _generate_ai_instruction(self, stage: str, action: str, language: str, target_document: str, action_prompt: str = None) -> str:
+    def _generate_ai_instruction(
+        self,
+        stage: str,
+        action: str,
+        language: str,
+        target_document: str,
+        action_prompt: str = None,
+    ) -> str:
         """Generate AI instruction string with template-based prompt"""
         if action_prompt:
-            return self._create_template_based_instruction(action_prompt, language, target_document, stage, action)
+            return self._create_template_based_instruction(
+                action_prompt, language, target_document, stage, action
+            )
         else:
-            return self._create_fallback_instruction(stage, action, language, target_document)
+            return self._create_fallback_instruction(
+                stage, action, language, target_document
+            )
 
-    def _create_template_based_instruction(self, action_prompt: str, language: str, target_document: str, stage: str, action: str, system_prompt: str=None) -> str:
+    def _create_template_based_instruction(
+        self,
+        action_prompt: str,
+        language: str,
+        target_document: str,
+        stage: str,
+        action: str,
+        system_prompt: str = None,
+    ) -> str:
         """Create AI instruction content using template-defined prompt"""
         variables = {
-            'TARGET_DOCUMENT': target_document,
-            'STAGE': stage,
-            'ACTION': action
+            "TARGET_DOCUMENT": target_document,
+            "STAGE": stage,
+            "ACTION": action,
         }
 
         if system_prompt is None:
-            system_prompt = f"""
-**Constitution**:
-**RULE1:** You MUST use "{language}" as your preferred language for following conversation and documentation. However, use English for code (including comments) and web search queries.  
-"""
+            system_prompt = self.SYSTEM_PROMPT_TEMPLATE.format(language=language)
 
-        return process_template_variables(f'{system_prompt}\n\n===\n\n{action_prompt}', variables)
+        return process_template_variables(
+            f"{system_prompt}\n\n===\n\n{action_prompt}", variables
+        )
 
-    def _create_fallback_instruction(self, stage: str, action: str, language: str, target_document: str) -> str:
+    def _create_fallback_instruction(
+        self, stage: str, action: str, language: str, target_document: str
+    ) -> str:
         """Create fallback AI instruction content when no template prompt is available"""
         return self.FALLBACK_INSTRUCTION_TEMPLATE.format(
             stage=stage,
             action=action,
             language=language,
-            target_document=target_document
+            target_document=target_document,
         )
 
     def _validate_stage(self, stage: str) -> bool:
@@ -253,41 +323,17 @@ Follow the guidelines and update the target document accordingly."""
         """Generate help content for TempDD workflow in Claude Code"""
         stages = self.config.get("stages", [])
         language = self.config.get("language", "en").upper()
+        system_prompt = self.SYSTEM_PROMPT_TEMPLATE.format(language=language)
 
-        help_content = f"""== TempDD for Claude Code ==
-
-Language: {language}
-Available Stages: {', '.join(stages)}
-
-Workflow:
-1. PRD (Product Requirements Document)
-   - Use '/tempdd prd build' to create product requirements
-
-2. Architecture Document
-   - Use '/tempdd arch build' to design system architecture
-
-3. Research Document
-   - Use '/tempdd research build' to conduct technical research
-
-4. Blueprint Document
-   - Use '/tempdd blueprint build' to create detailed implementation blueprint
-
-5. Tasks Document & Implementation
-   - Use '/tempdd tasks build' to break down implementation tasks
-   - Use '/tempdd tasks run' to implement the planned tasks
-
-Stage Actions:
-  build - Create/build the document for the stage
-  run   - Execute the implementation (for tasks stage)
-
-Each stage builds upon the previous one, creating a structured development workflow from requirements to implementation.
-"""
-        return help_content
+        return self.HELP_CONTENT_TEMPLATE.format(
+            system_prompt=system_prompt, language=language, stages=", ".join(stages)
+        )
 
     def _save_config(self) -> None:
         """Save configuration to file"""
-        config_file = self.work_dir / ".tempdd" / "config.json"
+        file_manager = FileManager(self.work_dir)
+        config_file = file_manager.get_project_config_path()
         config_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(config_file, 'w', encoding='utf-8') as f:
+        with open(config_file, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=2, ensure_ascii=False)

@@ -3,7 +3,6 @@ build:
   prompt: |
     You are a Technical Lead creating a comprehensive task list for development execution. Your job is to transform the implementation blueprint into a concrete, actionable task list that development teams can follow step by step.
 
-    Language: {{LANGUAGE}}
     Target Document: {{TARGET_DOCUMENT}}
 
     **Your Mission**: Transform the template into a formal task list by:
@@ -38,7 +37,6 @@ run:
   prompt: |
     You are a Senior Developer executing the development task list. Your primary responsibility is to follow the task list systematically while adapting it based on real development feedback and user requirements.
 
-    Language: {{LANGUAGE}}
     Target Document: {{TARGET_DOCUMENT}}
 
     **Your Executive Functions**:
@@ -73,7 +71,16 @@ run:
 - **Comprehensive**: Cover structure, components, APIs, data, and workflows
 - **Section Constraint**: Fill existing sections only - do not add new sections
 
-**Fill-in language for `[[...]]` placeholders**: {{LANGUAGE}}
+**Table of Contents**
+⚠️ Developer Instructions - READ FIRST
+📋 Basic Information
+📋 Tasks
+🏗️ Setup & Infrastructure
+🔄 TDD Development Cycles
+🧪 Quality Assurance & Integration
+📚 Documentation & Deployment
+
+**Fill-in `[[...]]` placeholders with appropriate content**
 
 ---
 

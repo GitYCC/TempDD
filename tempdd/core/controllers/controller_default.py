@@ -102,7 +102,7 @@ Follow the guidelines and update the target document accordingly."""
         ai_instruction = self._generate_ai_instruction(stage, action, language_str, target_document, action_prompt)
 
         if action == 'build':
-            self._save_target_document(target_document, template_content, target_dir, language_str)
+            self._save_target_document(target_document, template_content, target_dir)
 
         return ai_instruction
 
@@ -181,19 +181,18 @@ Follow the guidelines and update the target document accordingly."""
         except (FileNotFoundError, ValueError) as e:
             raise FileNotFoundError(f"Failed to parse template for stage {stage}: {e}")
 
-    def _save_target_document(self, target_document: str, template_content: str, target_dir: Path, language: str) -> None:
+    def _save_target_document(self, target_document: str, template_content: str, target_dir: Path) -> None:
         """Save the target document with processed template content"""
-        target_content = self._fill_in_template_content(template_content, target_dir, language)
+        target_content = self._fill_in_template_content(template_content, target_dir)
         with open(target_document, 'w', encoding='utf-8') as f:
             f.write(target_content)
 
-    def _fill_in_template_content(self, template_content, target_dir, language):
+    def _fill_in_template_content(self, template_content, target_dir):
         context = {
             'PATH_PRD': str(target_dir / "prd.md"),
             'PATH_ARCH': str(target_dir / "arch.md"),
             'PATH_RESEARCH': str(target_dir / "research.md"),
             'PATH_BLUEPRINT': str(target_dir / "blueprint.md"),
-            'LANGUAGE': language,
         }
         processed_content = process_template(template_content, context)
         return processed_content
@@ -210,16 +209,20 @@ Follow the guidelines and update the target document accordingly."""
         else:
             return self._create_fallback_instruction(stage, action, language, target_document)
 
-    def _create_template_based_instruction(self, action_prompt: str, language: str, target_document: str, stage: str, action: str) -> str:
+    def _create_template_based_instruction(self, action_prompt: str, language: str, target_document: str, stage: str, action: str, system_prompt: str=None) -> str:
         """Create AI instruction content using template-defined prompt"""
         variables = {
-            'LANGUAGE': language,
             'TARGET_DOCUMENT': target_document,
             'STAGE': stage,
             'ACTION': action
         }
 
-        return process_template_variables(action_prompt, variables)
+        if system_prompt is None:
+            system_prompt = f"""\
+MUST Use {language} as your preferred language for conversation and documentation. However, always use English for code (including comments) and web search queries.
+"""
+
+        return process_template_variables(f'{system_prompt}\n\n===\n\n{action_prompt}', variables)
 
     def _create_fallback_instruction(self, stage: str, action: str, language: str, target_document: str) -> str:
         """Create fallback AI instruction content when no template prompt is available"""

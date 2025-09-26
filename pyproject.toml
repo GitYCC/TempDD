@@ -12,7 +12,7 @@ exclude = ["ENV*", "tests*"]
 
 [project]
 name = "tempdd"
-version = "0.1.0"
+version = "0.1.1"
 description = "Template-Driven Development Framework for AI Coding"
 authors = [{name = "Yi-Chang Chen"}]
 license = {text = "MIT"}

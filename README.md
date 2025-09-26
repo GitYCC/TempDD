@@ -24,7 +24,7 @@ Create a new project directory and initialize TempDD:
 ```bash
 mkdir demo
 cd demo
-tempdd init --language zhtw
+tempdd init
 
 claude # run Claude Code
 ```

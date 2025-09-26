@@ -218,8 +218,9 @@ Follow the guidelines and update the target document accordingly."""
         }
 
         if system_prompt is None:
-            system_prompt = f"""\
-MUST Use {language} as your preferred language for conversation and documentation. However, always use English for code (including comments) and web search queries.
+            system_prompt = f"""
+**Constitution**:
+**RULE1:** You MUST use "{language}" as your preferred language for following conversation and documentation. However, use English for code (including comments) and web search queries.  
 """
 
         return process_template_variables(f'{system_prompt}\n\n===\n\n{action_prompt}', variables)

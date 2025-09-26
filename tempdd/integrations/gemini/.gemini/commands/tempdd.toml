@@ -1,6 +1,6 @@
-# TempDD Claude-Code Command
+description = "TempDD Command Entrypoint"
 
-Follow these steps:
+prompt = """Follow these steps:
 
 1.  **Check Arguments**: If `$ARGUMENTS` is "help" or empty, run `tempdd help` to get the output content and display the output with preferred language. Then stop - do not execute further steps.
 2.  **Execute Command**: Otherwise, run `tempdd ai "$ARGUMENTS"`
@@ -12,3 +12,4 @@ Note: The format is `tempdd ai "<stage> <action>"`, for example:
 - `tempdd ai "arch build"`
 - `tempdd ai "tasks build"`
 - `tempdd ai "tasks run"`
+"""

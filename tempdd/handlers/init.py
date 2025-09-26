@@ -4,7 +4,12 @@ from pathlib import Path
 import json
 import shutil
 import logging
+import glob
 from tempdd.utils import load_config as load_existing_config, process_template
+
+COLOR_GRAY = '\033[90m'
+COLOR_YELLOW = '\033[93m'
+COLOR_END = '\033[0m'
 
 
 def get_core_path() -> Path:
@@ -17,16 +22,125 @@ def get_tools_path() -> Path:
     return Path(__file__).parent.parent / "integrations"
 
 
+def get_available_configs() -> list[tuple[str, dict]]:
+    """Get available configuration files with their metadata."""
+    configs_dir = get_core_path() / "configs"
+    config_files = []
+
+    for config_file in configs_dir.glob("config_*.json"):
+        config_name = config_file.stem.replace("config_", "")
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+            config_files.append((config_name, config_data))
+        except (json.JSONDecodeError, FileNotFoundError):
+            continue
+
+    return config_files
+
+
+def prompt_config_selection() -> str:
+    """Interactive prompt for config selection."""
+    configs = get_available_configs()
+
+    if not configs:
+        print("No configuration files found, using default.")
+        return "default"
+
+    print("\nSelect a configuration:")
+    for i, (name, config_data) in enumerate(configs, 1):
+        description = config_data.get("description", "No description available")
+        print(COLOR_GRAY + f"{i}. {name} ({description})" + COLOR_END)
+
+    while True:
+        try:
+            if len(configs) == 1:
+                choice = input(f"Enter choice (1): ").strip()
+            else:
+                choice = input(f"Enter choice (1-{len(configs)}): ").strip()
+            if not choice:
+                return configs[0][0]  # Default to first option
+
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(configs):
+                return configs[choice_num - 1][0]
+            else:
+                print(f"Please enter a number between 1 and {len(configs)}")
+        except ValueError:
+            print("Please enter a valid number")
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            return None
+
+
+def prompt_platform_selection() -> str:
+    """Interactive prompt for platform selection."""
+    platforms = [
+        ("claudecode", "Claude Code"),
+        ("geminicli", "Gemini CLI"),
+    ]
+
+    print("\nSelect target platform:")
+    for i, (key, name) in enumerate(platforms, 1):
+        print(COLOR_GRAY + f"{i}. {name}" + COLOR_END)
+
+    while True:
+        try:
+            if len(platforms) == 1:
+                choice = input(f"Enter choice (1, default: 1): ").strip()
+            else:
+                choice = input(f"Enter choice (1-{len(platforms)}, default: 1): ").strip()
+            if not choice:
+                return platforms[0][0]  # Default to Claude Code
+
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(platforms):
+                return platforms[choice_num - 1][0]
+            else:
+                print(f"Please enter a number between 1 and {len(platforms)}")
+        except ValueError:
+            print("Please enter a valid number")
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            return None
+
+
+def prompt_language_input() -> str:
+    """Interactive prompt for language selection."""
+    print("\nEnter preferred language (default: en):")
+    print(COLOR_GRAY + "Examples: en, zh-TW, zh-CN, ja, ko, etc." + COLOR_END)
+
+    try:
+        language = input("Language: ").strip()
+        return language if language else "en"
+    except KeyboardInterrupt:
+        print("\nOperation cancelled.")
+        return None
+
+
 def load_default_or_custom_config(config_path: str = None) -> dict:
     """Load configuration file, using default if not specified."""
     if config_path:
-        # Use specified config file
-        config_file = Path(config_path)
-        if not config_file.exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+        if '/' in config_path:
+            # It's a file path - must have .json extension
+            if not config_path.endswith('.json'):
+                raise ValueError(f"Config file path must have .json extension: {config_path}")
+            config_file = Path(config_path)
+            if not config_file.exists():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+        elif config_path.endswith('.json'):
+            # It's a .json file in current directory
+            config_file = Path(config_path)
+            if not config_file.exists():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+        else:
+            # Use as config name from configs directory
+            config_file = get_core_path() / "configs" / f"config_{config_path}.json"
+            if not config_file.exists():
+                raise FileNotFoundError(f"Config file not found: {config_file}")
     else:
         # Use default config
-        config_file = get_core_path() / "default_config.json"
+        config_file = get_core_path() / "configs" / "config_default.json"
         if not config_file.exists():
             raise FileNotFoundError(f"Default config file not found: {config_file}")
 
@@ -105,18 +219,41 @@ def copy_templates_from_config(base_path: Path, config: dict, force: bool = Fals
         logger.info(f"Created template: .tempdd/templates/template_{stage}.md")
 
 
-def init_command(force: bool = False, tool: str = "claudecode", language: str = "en", config_path: str = None) -> int:
+def init_command(force: bool = False, tool: str = None, language: str = None, config_path: str = None, interactive: bool = True) -> int:
     """Initialize a new TempDD project."""
     logger = logging.getLogger(__name__)
     current_path = Path.cwd()
 
     logger.info(f"Initializing TempDD project in: {current_path}")
+
+    # Interactive prompts if parameters not provided
+    if interactive:
+        if config_path is None:
+            config_path = prompt_config_selection()
+            if config_path is None:  # User cancelled
+                return 1
+
+        if tool is None:
+            tool = prompt_platform_selection()
+            if tool is None:  # User cancelled
+                return 1
+
+        if language is None:
+            language = prompt_language_input()
+            if language is None:  # User cancelled
+                return 1
+
+    # Set defaults if still None
+    if config_path is None:
+        config_path = "default"
+    if tool is None:
+        tool = "claudecode"
+    if language is None:
+        language = "en"
+
     logger.info(f"Using tool: {tool}")
     logger.info(f"Language: {language}")
-    if config_path:
-        logger.info(f"Config file: {config_path}")
-    else:
-        logger.info("Using default configuration")
+    logger.info(f"Config: {config_path}")
 
     try:
         # 1. Load configuration first
@@ -144,11 +281,12 @@ def init_command(force: bool = False, tool: str = "claudecode", language: str = 
         # 5. Create tool integration
         create_tool_integration(current_path, tool, force)
 
-        logger.info("TempDD project initialized successfully!")
-        logger.info("Next steps:")
-        logger.info("1. Customize templates in .tempdd/templates/")
-        logger.info("2. Use '/tempdd' command in Claude Code for integration")
-
+        print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
+        print(COLOR_YELLOW + "Next steps:" + COLOR_END)
+        if tool == 'claudecode':
+            print(COLOR_YELLOW + "1. Execute `claude` to start Claude Code" + COLOR_END)
+            print(COLOR_YELLOW + "2. Use '/tempdd help' command in Claude Code to learn how to use the current flow." + COLOR_END)
+        print("")
         return 0
 
     except Exception as e:

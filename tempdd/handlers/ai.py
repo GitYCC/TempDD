@@ -44,7 +44,7 @@ def _load_controller(config_path: str = None):
             config = json.load(f)
     else:
         # Fallback to default config
-        default_config_path = Path(__file__).parent.parent / "core" / "default_config.json"
+        default_config_path = Path(__file__).parent.parent / "core" / "configs" / "config_default.json"
         if default_config_path.exists():
             with open(default_config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)

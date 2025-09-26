@@ -66,7 +66,7 @@ Follow the guidelines and update the target document accordingly."""
                 return json.load(f)
 
         # Fallback to default config
-        default_config_path = Path(__file__).parent.parent / "default_config.json"
+        default_config_path = Path(__file__).parent.parent / "configs" / "config_default.json"
         if default_config_path.exists():
             with open(default_config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -248,6 +248,41 @@ Follow the guidelines and update the target document accordingly."""
         self._controller_state.update(kwargs)
         self.config["controller_state"] = self._controller_state
         self._save_config()
+
+    def get_help_content(self) -> str:
+        """Generate help content for TempDD workflow in Claude Code"""
+        stages = self.config.get("stages", [])
+        language = self.config.get("language", "en").upper()
+
+        help_content = f"""== TempDD for Claude Code ==
+
+Language: {language}
+Available Stages: {', '.join(stages)}
+
+Workflow:
+1. PRD (Product Requirements Document)
+   - Use '/tempdd prd build' to create product requirements
+
+2. Architecture Document
+   - Use '/tempdd arch build' to design system architecture
+
+3. Research Document
+   - Use '/tempdd research build' to conduct technical research
+
+4. Blueprint Document
+   - Use '/tempdd blueprint build' to create detailed implementation blueprint
+
+5. Tasks Document & Implementation
+   - Use '/tempdd tasks build' to break down implementation tasks
+   - Use '/tempdd tasks run' to implement the planned tasks
+
+Stage Actions:
+  build - Create/build the document for the stage
+  run   - Execute the implementation (for tasks stage)
+
+Each stage builds upon the previous one, creating a structured development workflow from requirements to implementation.
+"""
+        return help_content
 
     def _save_config(self) -> None:
         """Save configuration to file"""

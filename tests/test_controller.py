@@ -264,7 +264,7 @@ class TestProcessCommand:
 
 # Helper function to get stages from default config
 def get_default_stages():
-    default_config_path = Path(__file__).parent.parent / "tempdd" / "core" / "default_config.json"
+    default_config_path = Path(__file__).parent.parent / "tempdd" / "core" / "configs" / "config_default.json"
     with open(default_config_path, 'r') as f:
         config = json.load(f)
     return config.get("stages", [])

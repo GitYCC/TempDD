@@ -1,4 +1,5 @@
 {
+  "description": "Default flow of software development, including PRD, Arch., Research, BluePrint, Tasks stages.",
   "language": "en",
   "logging_level": "WARNING",
   "stages": ["prd", "arch", "research", "blueprint", "tasks"],

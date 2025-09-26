@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 exclude = ["ENV*", "tests*"]
 
 [tool.setuptools.package-data]
-"tempdd.core" = ["*.json"]
+"tempdd.core.configs" = ["*.json"]
 "tempdd.core.templates" = ["*.md"]
 "tempdd.integrations.claudecode.commands" = ["*.md"]
 

@@ -9,6 +9,7 @@ from pathlib import Path
 from . import __version__
 from tempdd.handlers.init import init_command
 from tempdd.handlers.ai import ai_command
+from tempdd.handlers.help import help_command
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -46,17 +47,15 @@ Examples:
     )
     init_parser.add_argument(
         "--tool",
-        default="claudecode",
-        help="Target tool for integration (default: claude-code)"
+        help="Target tool for integration (if not specified, will prompt interactively)"
     )
     init_parser.add_argument(
         "--language",
-        default="en",
-        help="Language setting (default: en)"
+        help="Language setting (if not specified, will prompt interactively)"
     )
     init_parser.add_argument(
         "--config",
-        help="Path to configuration file (default: uses built-in default_config.json)"
+        help="Path to configuration file (if not specified, will prompt interactively)"
     )
 
     # AI command (replaces preprocess and agent)
@@ -67,6 +66,12 @@ Examples:
     ai_parser.add_argument(
         "stage_action",
         help="Stage and action in format 'stage action' (e.g., 'prd build', 'arch continue')"
+    )
+
+    # Help command
+    help_parser = subparsers.add_parser(
+        "help",
+        help="Show help information about TempDD workflow"
     )
 
     return parser
@@ -82,7 +87,7 @@ def _get_logging_level_from_config() -> int:
                 config = json.load(f)
         else:
             # Fallback to default config
-            default_config_path = Path(__file__).parent / "core" / "default_config.json"
+            default_config_path = Path(__file__).parent / "core" / "configs" / "config_default.json"
             with open(default_config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
 
@@ -114,12 +119,14 @@ def main() -> int:
         if args.command == "init":
             return init_command(
                 force=getattr(args, 'force', False),
-                tool=getattr(args, 'tool', 'claudecode'),
-                language=getattr(args, 'language', 'en'),
+                tool=getattr(args, 'tool', None),
+                language=getattr(args, 'language', None),
                 config_path=getattr(args, 'config', None)
             )
         elif args.command == "ai":
             return ai_command(args.stage_action)
+        elif args.command == "help":
+            return help_command()
         else:
             logger = logging.getLogger(__name__)
             logger.error(f"Unknown command: {args.command}")

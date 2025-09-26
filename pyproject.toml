@@ -8,7 +8,10 @@ exclude = ["ENV*", "tests*"]
 [tool.setuptools.package-data]
 "tempdd.core.configs" = ["*.json"]
 "tempdd.core.templates" = ["*.md"]
-"tempdd.integrations.claudecode.commands" = ["*.md"]
+"tempdd.integrations.claude.claude.commands" = ["*.md"]
+"tempdd.integrations.gemini.gemini.commands" = ["*.toml"]
+"tempdd.integrations.cursor.cursor.commands" = ["*.md"]
+"tempdd.integrations.copilot.github.prompts" = ["*.md"]
 
 [project]
 name = "tempdd"

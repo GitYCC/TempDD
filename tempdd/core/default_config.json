@@ -1,5 +1,6 @@
 {
   "language": "en",
+  "logging_level": "WARNING",
   "stages": ["prd", "arch", "research", "blueprint", "tasks"],
   "controller": "controller_default",
   "templates": {

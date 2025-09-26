@@ -1,7 +1,10 @@
 """Main CLI entry point for TempDD."""
 
 import argparse
+import json
+import logging
 import sys
+from pathlib import Path
 
 from . import __version__
 from tempdd.handlers.init import init_command
@@ -69,8 +72,37 @@ Examples:
     return parser
 
 
+def _get_logging_level_from_config() -> int:
+    """Get logging level from configuration."""
+    try:
+        # Try to load project config first
+        config_file = Path.cwd() / ".tempdd" / "config.json"
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        else:
+            # Fallback to default config
+            default_config_path = Path(__file__).parent / "core" / "default_config.json"
+            with open(default_config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+        level_str = config.get("logging_level", "WARNING").upper()
+        return getattr(logging, level_str, logging.WARNING)
+    except (FileNotFoundError, json.JSONDecodeError, AttributeError):
+        # If anything fails, default to WARNING
+        return logging.WARNING
+
+
 def main() -> int:
     """Main CLI entry point."""
+    # Configure logging for CLI from configuration
+    logging_level = _get_logging_level_from_config()
+    logging.basicConfig(
+        level=logging_level,
+        format='%(levelname)s: %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+
     parser = create_parser()
     args = parser.parse_args()
 
@@ -89,13 +121,16 @@ def main() -> int:
         elif args.command == "ai":
             return ai_command(args.stage_action)
         else:
-            print(f"Unknown command: {args.command}", file=sys.stderr)
+            logger = logging.getLogger(__name__)
+            logger.error(f"Unknown command: {args.command}")
             return 1
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user", file=sys.stderr)
+        logger = logging.getLogger(__name__)
+        logger.info("Operation cancelled by user")
         return 1
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error: {e}")
         return 1
 
 

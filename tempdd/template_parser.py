@@ -6,6 +6,8 @@ Supports the new simplified format where actions (build, continue, run) directly
 """
 
 import yaml
+import re
+import logging
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 
@@ -111,6 +113,13 @@ def process_template_variables(content: str, variables: Dict[str, str]) -> str:
     for var_name, var_value in variables.items():
         placeholder = f"{{{{{var_name}}}}}"
         processed_content = processed_content.replace(placeholder, str(var_value))
+
+    # Check for remaining unreplaced variables and log warnings
+    remaining_vars = re.findall(r'\{\{([^}]+)\}\}', processed_content)
+    if remaining_vars:
+        logger = logging.getLogger(__name__)
+        for var in remaining_vars:
+            logger.warning(f"Template variable '{{{{%s}}}}' was not replaced. Variable not found in provided variables.", var)
 
     return processed_content
 

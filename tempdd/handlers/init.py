@@ -3,6 +3,7 @@
 from pathlib import Path
 import json
 import shutil
+import logging
 from tempdd.utils import load_config as load_existing_config, process_template
 
 
@@ -40,13 +41,14 @@ def create_directory_structure(base_path: Path, force: bool = False) -> None:
         ".tempdd/templates",
     ]
 
+    logger = logging.getLogger(__name__)
     for dir_path in directories:
         full_path = base_path / dir_path
         if full_path.exists() and not force:
-            print(f"Directory {dir_path} already exists, skipping...")
+            logger.info(f"Directory {dir_path} already exists, skipping...")
             continue
         full_path.mkdir(parents=True, exist_ok=True)
-        print(f"Created directory: {dir_path}")
+        logger.info(f"Created directory: {dir_path}")
 
 
 
@@ -58,17 +60,18 @@ def create_tool_integration(base_path: Path, tool: str = "claudecode", force: bo
     tools_path = get_tools_path() / tool / "commands"
     source_file = tools_path / "tempdd.md"
 
+    logger = logging.getLogger(__name__)
     if not source_file.exists():
-        print(f"Warning: Tool integration not found for '{tool}': {source_file}")
+        logger.warning(f"Tool integration not found for '{tool}': {source_file}")
         return
 
     target_file = commands_path / "tempdd.md"
     if target_file.exists() and not force:
-        print(f"{tool.title()} integration already exists, skipping...")
+        logger.info(f"{tool.title()} integration already exists, skipping...")
         return
 
     shutil.copy2(source_file, target_file)
-    print(f"Created {tool} integration: .claude/commands/tempdd.md")
+    logger.info(f"Created {tool} integration: .claude/commands/tempdd.md")
 
 
 def copy_templates_from_config(base_path: Path, config: dict, force: bool = False) -> None:
@@ -76,7 +79,8 @@ def copy_templates_from_config(base_path: Path, config: dict, force: bool = Fals
     target_dir = base_path / ".tempdd" / "templates"
     source_dir = get_core_path() / "templates"
 
-    print("Creating templates from configuration...")
+    logger = logging.getLogger(__name__)
+    logger.info("Creating templates from configuration...")
 
     # Get templates from config
     templates = config.get("templates", {})
@@ -87,31 +91,32 @@ def copy_templates_from_config(base_path: Path, config: dict, force: bool = Fals
 
         # Skip if target exists and force is False
         if target_file.exists() and not force:
-            print(f"Template template_{stage}.md already exists, skipping...")
+            logger.info(f"Template template_{stage}.md already exists, skipping...")
             continue
 
         # Skip if source doesn't exist
         if not source_file.exists():
-            print(f"Warning: Source template not found: {source_file}")
+            logger.warning(f"Source template not found: {source_file}")
             continue
 
         # Copy template content directly
         content = source_file.read_text(encoding='utf-8')
         target_file.write_text(content, encoding='utf-8')
-        print(f"Created template: .tempdd/templates/template_{stage}.md")
+        logger.info(f"Created template: .tempdd/templates/template_{stage}.md")
 
 
 def init_command(force: bool = False, tool: str = "claudecode", language: str = "en", config_path: str = None) -> int:
     """Initialize a new TempDD project."""
+    logger = logging.getLogger(__name__)
     current_path = Path.cwd()
 
-    print(f"Initializing TempDD project in: {current_path}")
-    print(f"Using tool: {tool}")
-    print(f"Language: {language}")
+    logger.info(f"Initializing TempDD project in: {current_path}")
+    logger.info(f"Using tool: {tool}")
+    logger.info(f"Language: {language}")
     if config_path:
-        print(f"Config file: {config_path}")
+        logger.info(f"Config file: {config_path}")
     else:
-        print("Using default configuration")
+        logger.info("Using default configuration")
 
     try:
         # 1. Load configuration first
@@ -127,11 +132,11 @@ def init_command(force: bool = False, tool: str = "claudecode", language: str = 
         # 3. Write config to ./.tempdd/config.json
         target_config_path = current_path / ".tempdd" / "config.json"
         if target_config_path.exists() and not force:
-            print(f"Config file already exists at {target_config_path}, skipping...")
+            logger.info(f"Config file already exists at {target_config_path}, skipping...")
         else:
             with open(target_config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
-            print(f"Created config file: .tempdd/config.json")
+            logger.info(f"Created config file: .tempdd/config.json")
 
         # 4. Copy templates with new naming convention (template_{stage}.md)
         copy_templates_from_config(current_path, config, force)
@@ -139,13 +144,13 @@ def init_command(force: bool = False, tool: str = "claudecode", language: str = 
         # 5. Create tool integration
         create_tool_integration(current_path, tool, force)
 
-        print("\n✓ TempDD project initialized successfully!")
-        print("\nNext steps:")
-        print("1. Customize templates in .tempdd/templates/")
-        print("2. Use '/tempdd' command in Claude Code for integration")
+        logger.info("TempDD project initialized successfully!")
+        logger.info("Next steps:")
+        logger.info("1. Customize templates in .tempdd/templates/")
+        logger.info("2. Use '/tempdd' command in Claude Code for integration")
 
         return 0
 
     except Exception as e:
-        print(f"Failed to initialize project: {e}")
+        logger.error(f"Failed to initialize project: {e}")
         return 1

@@ -38,7 +38,7 @@ def test_init_command():
         os.chdir(temp_dir)
 
         result = subprocess.run(
-            ["python", "-m", "tempdd.cli", "init", "--force"],
+            ["python", "-m", "tempdd.cli", "init", "--force", "--config", "default", "--tool", "claude", "--language", "en"],
             capture_output=True,
             text=True
         )
@@ -101,7 +101,7 @@ def test_ai_command_with_project():
 
         # Initialize project first
         subprocess.run(
-            ["python", "-m", "tempdd.cli", "init", "--force"],
+            ["python", "-m", "tempdd.cli", "init", "--force", "--config", "default", "--tool", "claude", "--language", "en"],
             capture_output=True
         )
 
@@ -168,7 +168,7 @@ def test_e2e_ai_command_generates_correct_path():
 
         # 1. Initialize project
         subprocess.run(
-            ["python", "-m", "tempdd.cli", "init", "--force"],
+            ["python", "-m", "tempdd.cli", "init", "--force", "--config", "default", "--tool", "claude", "--language", "en"],
             check=True,
             capture_output=True
         )

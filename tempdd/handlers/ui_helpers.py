@@ -36,7 +36,7 @@ BANNER = """
    ╚═╝   ╚══════╝╚═╝     ╚═╝╚═╝     ╚═════╝ ╚═════╝
 """
 
-TAGLINE = "Template-Driven Development Framework fo AI-Augmented Coding"
+TAGLINE = "Template-Driven Development Framework for AI-Augmented Coding"
 
 
 def show_banner():

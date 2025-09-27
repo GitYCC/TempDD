@@ -16,7 +16,7 @@ exclude = ["ENV*", "tests*"]
 [project]
 name = "tempdd"
 version = "0.1.2"
-description = "Template-Driven Development Framework for AI Coding"
+description = "Template-Driven Development Framework for AI-Augmented Coding"
 authors = [{name = "Yi-Chang Chen"}]
 license = {text = "MIT"}
 readme = "README.md"

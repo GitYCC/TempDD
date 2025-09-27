@@ -1,4 +1,4 @@
-# Template-Driven Development Framework for AI Coding
+# Template-Driven Development Framework for AI-Augmented Coding
 
 🚧 **Work In Progress** - This framework is under active development
 

@@ -235,7 +235,7 @@ def init_command(
                 )
                 print(
                     COLOR_YELLOW
-                    + "2. Use '/tempdd help' command in Claude Code to learn how to use the current flow."
+                    + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow."
                     + COLOR_END
                 )
             elif tool == "gemini":
@@ -244,7 +244,7 @@ def init_command(
                 )
                 print(
                     COLOR_YELLOW
-                    + "2. Use '/tempdd help' command in Gemini CLI to learn how to use the current flow."
+                    + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow."
                     + COLOR_END
                 )
             elif tool == "cursor":
@@ -253,7 +253,7 @@ def init_command(
                 )
                 print(
                     COLOR_YELLOW
-                    + "2. Use 'Ctrl+K' then '/tempdd help' to learn how to use the current flow."
+                    + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow."
                     + COLOR_END
                 )
             elif tool == "copilot":
@@ -264,7 +264,7 @@ def init_command(
                 )
                 print(
                     COLOR_YELLOW
-                    + "2. Use '#tempdd help' in your prompt to learn how to use the current flow."
+                    + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow."
                     + COLOR_END
                 )
         print("")

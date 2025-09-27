@@ -58,20 +58,20 @@ Available Stages: {stages}
 
 Workflow:
 1. PRD (Product Requirements Document)
-   - Use '/tempdd prd build' to create product requirements
+   - Use '/tempdd-go prd build' to create product requirements
 
 2. Architecture Document
-   - Use '/tempdd arch build' to design system architecture
+   - Use '/tempdd-go arch build' to design system architecture
 
 3. Research Document
-   - Use '/tempdd research build' to conduct technical research
+   - Use '/tempdd-go research build' to conduct technical research
 
 4. Blueprint Document
-   - Use '/tempdd blueprint build' to create detailed implementation blueprint
+   - Use '/tempdd-go blueprint build' to create detailed implementation blueprint
 
 5. Tasks Document & Implementation
-   - Use '/tempdd tasks build' to break down implementation tasks
-   - Use '/tempdd tasks run' to implement the planned tasks
+   - Use '/tempdd-go tasks build' to break down implementation tasks
+   - Use '/tempdd-go tasks run' to implement the planned tasks
 
 Stage Actions:
   build - Create/build the document for the stage

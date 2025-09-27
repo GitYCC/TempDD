@@ -33,27 +33,30 @@ claude # run Claude Code
 Once in Claude Code, use these commands to build your project structure:
 
 ```bash
+# Get help
+/tempdd-go help
+
 # Generate product requirements document
-/tempdd prd build
+/tempdd-go prd build
 
 # Create architecture design
-/tempdd arch build
+/tempdd-go arch build
 
 # Conduct research
-/tempdd research build
+/tempdd-go research build
 
 # Build implementation blueprint
-/tempdd blueprint build
+/tempdd-go blueprint build
 
 # Generate task list
-/tempdd tasks build
+/tempdd-go tasks build
 
 # Execute tasks
-/tempdd tasks run
+/tempdd-go tasks run
 ```
 
 ## Features
 
 - 📋 **Template-driven workflow** - Structured approach to project development
-- 🤖 **AI integration** - Seamless integration with Claude Code
+- 🤖 **AI integration** - Seamless integration with Claude Code, Gemini CLI, Cursor, and GitHub Copilot
 - 🌐 **Multi-language support** - Support for different languages (including Traditional Chinese)

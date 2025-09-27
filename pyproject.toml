@@ -33,7 +33,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    'PyYAML'
+    'PyYAML',
+    'readchar>=4.0.0',
+    'rich>=10.0.0'
 ]
 
 [project.scripts]

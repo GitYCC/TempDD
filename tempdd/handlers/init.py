@@ -3,8 +3,20 @@
 from pathlib import Path
 import json
 import logging
+import sys
 from tempdd.utils import load_config as load_existing_config, process_template
 from tempdd.file_manager import FileManager
+from .ui_helpers import (
+    select_with_arrows,
+    check_tool_installed,
+    fallback_number_selection,
+    show_banner,
+    is_project_initialized,
+    ask_user_confirmation,
+    HAS_READCHAR,
+    HAS_RICH,
+    console
+)
 
 COLOR_GRAY = "\033[90m"
 COLOR_YELLOW = "\033[93m"
@@ -40,30 +52,24 @@ def prompt_config_selection() -> str:
         print("No configuration files found, using default.")
         return "default"
 
-    print("\nSelect a configuration:")
-    for i, (name, config_data) in enumerate(configs, 1):
+    # Build options dictionary
+    config_options = {}
+    for name, config_data in configs:
         description = config_data.get("description", "No description available")
-        print(COLOR_GRAY + f"{i}. {name} ({description})" + COLOR_END)
+        config_options[name] = description
 
-    while True:
-        try:
-            if len(configs) == 1:
-                choice = input(f"Enter choice (1): ").strip()
-            else:
-                choice = input(f"Enter choice (1-{len(configs)}): ").strip()
-            if not choice:
-                return configs[0][0]  # Default to first option
+    # Check if interactive mode is supported
+    if not sys.stdin.isatty() or not HAS_READCHAR:
+        # Non-interactive mode or no readchar: use fallback
+        return fallback_number_selection(config_options, "Select a configuration:", "default")
 
-            choice_num = int(choice)
-            if 1 <= choice_num <= len(configs):
-                return configs[choice_num - 1][0]
-            else:
-                print(f"Please enter a number between 1 and {len(configs)}")
-        except ValueError:
-            print("Please enter a valid number")
-        except KeyboardInterrupt:
-            print("\nOperation cancelled.")
-            return None
+    # Interactive mode: use arrow keys
+    try:
+        selected = select_with_arrows(config_options, "Select a configuration:", "default")
+        return selected if selected else configs[0][0]  # Default to first option
+    except ImportError:
+        # readchar not available, fallback to number selection
+        return fallback_number_selection(config_options, "Select a configuration:", "default")
 
 
 def prompt_platform_selection() -> str:
@@ -75,48 +81,67 @@ def prompt_platform_selection() -> str:
         print("No integration tools available.")
         return None
 
-    platforms = [
-        (tool, file_manager.INTEGRATION_CONFIGS[tool].name) for tool in available_tools
-    ]
+    # Build options dictionary with tool detection status
+    platform_options = {}
+    for tool in available_tools:
+        name = file_manager.INTEGRATION_CONFIGS[tool].name
+        # Check if tool is installed
+        is_installed = check_tool_installed(tool)
+        status = "✓ installed" if is_installed else "○ not detected"
+        platform_options[tool] = f"{name} ({status})"
 
-    print("\nSelect target platform:")
-    for i, (key, name) in enumerate(platforms, 1):
-        print(COLOR_GRAY + f"{i}. {name}" + COLOR_END)
+    # Check if interactive mode is supported
+    if not sys.stdin.isatty() or not HAS_READCHAR:
+        # Non-interactive mode or no readchar: use fallback
+        return fallback_number_selection(platform_options, "Select target platform:", available_tools[0])
 
-    while True:
-        try:
-            if len(platforms) == 1:
-                choice = input(f"Enter choice (1, default: 1): ").strip()
-            else:
-                choice = input(
-                    f"Enter choice (1-{len(platforms)}, default: 1): "
-                ).strip()
-            if not choice:
-                return platforms[0][0]  # Default to first available
-
-            choice_num = int(choice)
-            if 1 <= choice_num <= len(platforms):
-                return platforms[choice_num - 1][0]
-            else:
-                print(f"Please enter a number between 1 and {len(platforms)}")
-        except ValueError:
-            print("Please enter a valid number")
-        except KeyboardInterrupt:
-            print("\nOperation cancelled.")
-            return None
+    # Interactive mode: use arrow keys
+    try:
+        selected = select_with_arrows(platform_options, "Select target platform:", available_tools[0])
+        return selected if selected else available_tools[0]  # Default to first option
+    except ImportError:
+        # readchar not available, fallback to number selection
+        return fallback_number_selection(platform_options, "Select target platform:", available_tools[0])
 
 
 def prompt_language_input() -> str:
     """Interactive prompt for language selection."""
-    print("\nEnter preferred language (default: en):")
-    print(COLOR_GRAY + "Examples: en, zh-TW, zh-CN, ja, ko, etc." + COLOR_END)
+    language_options = {
+        "en": "English",
+        "zh-TW": "繁體中文",
+        "zh-CN": "简体中文",
+        "ja": "日本語",
+        "ko": "한국어",
+        "custom": "Enter custom language code"
+    }
 
+    # Check if interactive mode is supported
+    if not sys.stdin.isatty() or not HAS_READCHAR:
+        # Non-interactive mode or no readchar: use simple input
+        print("\nEnter preferred language (default: en):")
+        print(COLOR_GRAY + "Examples: en, zh-TW, zh-CN, ja, ko, etc." + COLOR_END)
+        try:
+            language = input("Language: ").strip()
+            return language if language else "en"
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            return None
+
+    # Interactive mode: use arrow keys
     try:
-        language = input("Language: ").strip()
-        return language if language else "en"
-    except KeyboardInterrupt:
-        print("\nOperation cancelled.")
-        return None
+        selected = select_with_arrows(language_options, "Enter preferred language:", "en")
+
+        if selected == "custom":
+            try:
+                language = input("Language code: ").strip()
+                return language if language else "en"
+            except KeyboardInterrupt:
+                return "en"
+
+        return selected if selected else "en"
+    except ImportError:
+        # readchar not available, fallback to simple input
+        return fallback_number_selection(language_options, "Enter preferred language:", "en")
 
 
 def load_default_or_custom_config(config_path: str = None) -> dict:
@@ -163,6 +188,10 @@ def init_command(
     """Initialize a new TempDD project."""
     logger = logging.getLogger(__name__)
     current_path = Path.cwd()
+
+    # Show banner if interactive
+    if interactive:
+        show_banner()
 
     logger.info(f"Initializing TempDD project in: {current_path}")
 
@@ -224,53 +253,95 @@ def init_command(
         # 5. Create tool integration
         file_manager.copy_integration_file(tool, force)
 
-        print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
-        print(COLOR_YELLOW + "Next steps:" + COLOR_END)
+        # Show success message with Rich styling
+        if HAS_RICH and console:
+            console.print("\n[bold green]✓ TempDD project initialized successfully![/bold green]")
 
-        file_manager = FileManager()
-        config = file_manager.INTEGRATION_CONFIGS.get(tool)
-        if config:
-            if tool == "claude":
-                print(
-                    COLOR_YELLOW
-                    + "1. Execute `claude` to start Claude Code"
-                    + COLOR_END
+            # Create next steps panel
+            steps_lines = []
+            file_manager = FileManager()
+            config = file_manager.INTEGRATION_CONFIGS.get(tool)
+            if config:
+                if tool == "claude":
+                    steps_lines.extend([
+                        "1. Execute [cyan]claude[/cyan] to start Claude Code",
+                        "2. Use [cyan]/tempdd-go help[/cyan] command in Claude Code to learn how to use the current flow."
+                    ])
+                elif tool == "gemini":
+                    steps_lines.extend([
+                        "1. Execute [cyan]gemini[/cyan] to start Gemini CLI",
+                        "2. Use [cyan]/tempdd-go help[/cyan] command in Gemini CLI to learn how to use the current flow."
+                    ])
+                elif tool == "cursor":
+                    steps_lines.extend([
+                        "1. Execute [cyan]cursor .[/cyan] to start Cursor",
+                        "2. Use [cyan]Ctrl+K[/cyan] then [cyan]/tempdd-go help[/cyan] to learn how to use the current flow."
+                    ])
+                elif tool == "copilot":
+                    steps_lines.extend([
+                        "1. Open project in your IDE with GitHub Copilot installed",
+                        "2. Use [cyan]#tempdd-go help[/cyan] in your prompt to learn how to use the current flow."
+                    ])
+
+            if steps_lines:
+                from rich.panel import Panel
+                steps_panel = Panel(
+                    "\n".join(steps_lines),
+                    title="[bold]Next Steps[/bold]",
+                    border_style="green",
+                    padding=(1, 2)
                 )
-                print(
-                    COLOR_YELLOW
-                    + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow."
-                    + COLOR_END
-                )
-            elif tool == "gemini":
-                print(
-                    COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END
-                )
-                print(
-                    COLOR_YELLOW
-                    + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow."
-                    + COLOR_END
-                )
-            elif tool == "cursor":
-                print(
-                    COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END
-                )
-                print(
-                    COLOR_YELLOW
-                    + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow."
-                    + COLOR_END
-                )
-            elif tool == "copilot":
-                print(
-                    COLOR_YELLOW
-                    + "1. Open project in your IDE with GitHub Copilot installed"
-                    + COLOR_END
-                )
-                print(
-                    COLOR_YELLOW
-                    + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow."
-                    + COLOR_END
-                )
-        print("")
+                console.print(steps_panel)
+            console.print()
+        else:
+            # Fallback without Rich
+            print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
+            print(COLOR_YELLOW + "Next steps:" + COLOR_END)
+
+            file_manager = FileManager()
+            config = file_manager.INTEGRATION_CONFIGS.get(tool)
+            if config:
+                if tool == "claude":
+                    print(
+                        COLOR_YELLOW
+                        + "1. Execute `claude` to start Claude Code"
+                        + COLOR_END
+                    )
+                    print(
+                        COLOR_YELLOW
+                        + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow."
+                        + COLOR_END
+                    )
+                elif tool == "gemini":
+                    print(
+                        COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END
+                    )
+                    print(
+                        COLOR_YELLOW
+                        + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow."
+                        + COLOR_END
+                    )
+                elif tool == "cursor":
+                    print(
+                        COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END
+                    )
+                    print(
+                        COLOR_YELLOW
+                        + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow."
+                        + COLOR_END
+                    )
+                elif tool == "copilot":
+                    print(
+                        COLOR_YELLOW
+                        + "1. Open project in your IDE with GitHub Copilot installed"
+                        + COLOR_END
+                    )
+                    print(
+                        COLOR_YELLOW
+                        + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow."
+                        + COLOR_END
+                    )
+            print("")
         return 0
 
     except Exception as e:

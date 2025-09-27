@@ -13,8 +13,7 @@ TempDD is a template-driven development framework designed to streamline AI-assi
 Install `tempdd` using uv:
 
 ```bash
-uv tool install --force --from git+https://github.com/GitYCC/TempDD.git tempdd
-source /path/to/.XX-rc  # Replace with your shell config file (.bashrc, .zshrc, etc.)
+uv tool install --force --from git+https://github.com/GitYCC/TempDD.git tempdd && exec $SHELL
 ```
 
 ### 2. Initialize Project

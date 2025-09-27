@@ -1,0 +1,13 @@
+{
+  "description": "Simple flow of software development, including PRD, Arch., Tasks stages.",
+  "language": "en",
+  "logging_level": "WARNING",
+  "stages": ["prd", "blueprint", "tasks"],
+  "controller": "controller_simple",
+  "templates": {
+    "prd": "template_prd_default",
+    "blueprint": "template_blueprint_simple",
+    "tasks": "template_tasks_simple"
+  },
+  "controller_state": {}
+}

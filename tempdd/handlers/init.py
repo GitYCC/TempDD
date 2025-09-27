@@ -26,6 +26,9 @@ def get_available_configs() -> list[tuple[str, dict]]:
         except (json.JSONDecodeError, FileNotFoundError):
             continue
 
+    # Sort configs to put "default" first
+    config_files.sort(key=lambda x: (x[0] != "default", x[0]))
+
     return config_files
 
 

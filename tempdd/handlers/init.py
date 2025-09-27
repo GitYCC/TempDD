@@ -124,8 +124,8 @@ def prompt_language_input() -> str:
             language = input("Language: ").strip()
             return language if language else "en"
         except KeyboardInterrupt:
-            print("\nOperation cancelled.")
-            return None
+            print("\n\033[91mUser interrupted.\033[0m")
+            sys.exit(0)
 
     # Interactive mode: use arrow keys
     try:
@@ -136,7 +136,7 @@ def prompt_language_input() -> str:
                 language = input("Language code: ").strip()
                 return language if language else "en"
             except KeyboardInterrupt:
-                return "en"
+                sys.exit(0)
 
         return selected if selected else "en"
     except ImportError:

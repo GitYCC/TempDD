@@ -134,9 +134,8 @@ def select_with_arrows(options: dict, prompt: str, default_key: str = None) -> s
                     live.update(create_selection_panel(), refresh=True)
 
                 except KeyboardInterrupt:
-                    console.print("\n[yellow]Selection cancelled[/yellow]")
-                    selected_key = None
-                    break
+                    console.print("\n[red]User interrupted[/red]")
+                    sys.exit(0)
 
     run_selection_loop()
     return selected_key
@@ -182,8 +181,8 @@ def _basic_select_with_arrows(options: dict, prompt: str, default_key: str = Non
                 raise KeyboardInterrupt
 
         except KeyboardInterrupt:
-            print("\n\nOperation cancelled.")
-            return None
+            print("\n\n\033[91mUser interrupted.\033[0m")
+            sys.exit(0)
 
 
 def is_project_initialized(project_path: Path) -> bool:
@@ -238,8 +237,8 @@ def ask_user_confirmation(message: str, default: bool = False) -> bool:
         except KeyboardInterrupt:
             # Clear screen and show cancellation
             console.clear()
-            console.print("[yellow]Operation cancelled.[/yellow]")
-            return False
+            console.print("[red]User interrupted.[/red]")
+            sys.exit(0)
     else:
         # Basic confirmation without Rich
         default_text = "(Y/n)" if default else "(y/N)"
@@ -249,8 +248,8 @@ def ask_user_confirmation(message: str, default: bool = False) -> bool:
                 return default
             return response in ['y', 'yes', 'true', '1']
         except KeyboardInterrupt:
-            print("\nOperation cancelled.")
-            return False
+            print("\n\033[91mUser interrupted.\033[0m")
+            sys.exit(0)
 
 
 def check_tool_installed(tool: str) -> bool:
@@ -341,7 +340,7 @@ def fallback_number_selection(options: dict, prompt: str, default_key: str = Non
                 print("Please enter a valid number")
         except KeyboardInterrupt:
             if HAS_RICH and console:
-                console.print("\n[yellow]Operation cancelled.[/yellow]")
+                console.print("\n[red]User interrupted.[/red]")
             else:
-                print("\nOperation cancelled.")
-            return None
+                print("\n\033[91mUser interrupted.\033[0m")
+            sys.exit(0)

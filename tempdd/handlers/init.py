@@ -195,6 +195,39 @@ def init_command(
 
     logger.info(f"Initializing TempDD project in: {current_path}")
 
+    # Check if project is already initialized
+    if is_project_initialized(current_path):
+        if force:
+            # Force flag provided, proceed without asking
+            if interactive:
+                if HAS_RICH and console:
+                    console.print("[yellow]⚠ Project already initialized. Force flag provided, proceeding...[/yellow]")
+                else:
+                    print("Warning: Project already initialized. Force flag provided, proceeding...")
+        else:
+            # Ask user for confirmation
+            message = (
+                "This directory appears to already contain a TempDD project.\n"
+                "Continuing will overwrite existing configuration and templates.\n\n"
+                "Do you want to continue and reinitialize the project?"
+            )
+
+            if interactive:
+                should_continue = ask_user_confirmation(message, default=False)
+                if not should_continue:
+                    if HAS_RICH and console:
+                        console.print("[blue]Initialization cancelled.[/blue]")
+                    else:
+                        print("Initialization cancelled.")
+                    return 0
+                else:
+                    # User confirmed, redisplay banner since screen was cleared
+                    show_banner()
+            else:
+                # Non-interactive mode: don't proceed without force flag
+                logger.error("Project already initialized. Use --force to reinitialize.")
+                return 1
+
     # Interactive prompts if parameters not provided
     if interactive:
         if config_path is None:

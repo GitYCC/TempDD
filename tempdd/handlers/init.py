@@ -93,15 +93,15 @@ def prompt_platform_selection() -> str:
     # Check if interactive mode is supported
     if not sys.stdin.isatty() or not HAS_READCHAR:
         # Non-interactive mode or no readchar: use fallback
-        return fallback_number_selection(platform_options, "Select target platform:", available_tools[0])
+        return fallback_number_selection(platform_options, "Select target AI tool:", available_tools[0])
 
     # Interactive mode: use arrow keys
     try:
-        selected = select_with_arrows(platform_options, "Select target platform:", available_tools[0])
+        selected = select_with_arrows(platform_options, "Select target AI tool:", available_tools[0])
         return selected if selected else available_tools[0]  # Default to first option
     except ImportError:
         # readchar not available, fallback to number selection
-        return fallback_number_selection(platform_options, "Select target platform:", available_tools[0])
+        return fallback_number_selection(platform_options, "Select target AI tool:", available_tools[0])
 
 
 def prompt_language_input() -> str:

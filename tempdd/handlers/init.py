@@ -221,8 +221,8 @@ def init_command(
                         print("Initialization cancelled.")
                     return 0
                 else:
-                    # User confirmed, redisplay banner since screen was cleared
-                    show_banner()
+                    # User confirmed, continue with normal flow
+                    pass
             else:
                 # Non-interactive mode: don't proceed without force flag
                 logger.error("Project already initialized. Use --force to reinitialize.")
@@ -290,6 +290,22 @@ def init_command(
         if HAS_RICH and console:
             console.print("\n[bold green]✓ TempDD project initialized successfully![/bold green]")
 
+            # Show configuration summary
+            from rich.panel import Panel
+
+            # Get stages from config
+            stages = config.get("stages", [])
+            stages_text = ", ".join(stages) if stages else "None"
+
+            config_summary = f"Configuration: [cyan]{config_path}[/cyan]\nPlatform: [cyan]{tool}[/cyan]\nLanguage: [cyan]{language}[/cyan]\nStages: [cyan]{stages_text}[/cyan]"
+            summary_panel = Panel(
+                config_summary,
+                title="[bold]Project Configuration[/bold]",
+                border_style="blue",
+                padding=(1, 2)
+            )
+            console.print(summary_panel)
+
             # Create next steps panel
             steps_lines = []
             file_manager = FileManager()
@@ -325,11 +341,19 @@ def init_command(
                     padding=(1, 2)
                 )
                 console.print(steps_panel)
-            console.print()
         else:
             # Fallback without Rich
             print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
-            print(COLOR_YELLOW + "Next steps:" + COLOR_END)
+            print(f"Configuration: {config_path}")
+            print(f"Platform: {tool}")
+            print(f"Language: {language}")
+
+            # Get stages from config
+            stages = config.get("stages", [])
+            stages_text = ", ".join(stages) if stages else "None"
+            print(f"Stages: {stages_text}")
+
+            print(COLOR_YELLOW + "\nNext steps:" + COLOR_END)
 
             file_manager = FileManager()
             config = file_manager.INTEGRATION_CONFIGS.get(tool)
@@ -374,7 +398,6 @@ def init_command(
                         + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow."
                         + COLOR_END
                     )
-            print("")
         return 0
 
     except Exception as e:

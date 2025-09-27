@@ -27,6 +27,7 @@ console = Console() if HAS_RICH else None
 
 # TempDD ASCII Art Banner
 BANNER = """
+
 ████████╗███████╗███╗   ███╗██████╗ ██████╗ ██████╗
 ╚══██╔══╝██╔════╝████╗ ████║██╔══██╗██╔══██╗██╔══██╗
    ██║   █████╗  ██╔████╔██║██████╔╝██║  ██║██║  ██║
@@ -56,7 +57,8 @@ def show_banner():
     else:
         # Basic banner without Rich
         print(BANNER)
-        print(f"\n{TAGLINE}\n")
+        print(f"{TAGLINE}")
+        print()
 
 
 def select_with_arrows(options: dict, prompt: str, default_key: str = None) -> str:
@@ -92,6 +94,18 @@ def select_with_arrows(options: dict, prompt: str, default_key: str = None) -> s
         table.add_column(style="cyan", justify="left", width=3)
         table.add_column(style="white", justify="left")
 
+        # Handle multi-line prompts
+        prompt_lines = prompt.split('\n')
+        title_line = prompt_lines[0]
+
+        # Add prompt message lines (except first line which becomes title)
+        if len(prompt_lines) > 1:
+            table.add_row("", "")
+            for line in prompt_lines[1:]:
+                if line.strip():  # Skip empty lines
+                    table.add_row("", f"[white]{line}[/white]")
+            table.add_row("", "")
+
         for i, key in enumerate(option_keys):
             if i == selected_index:
                 table.add_row("▶", f"[cyan]{key}[/cyan] [dim]({options[key]})[/dim]")
@@ -103,12 +117,11 @@ def select_with_arrows(options: dict, prompt: str, default_key: str = None) -> s
 
         return Panel(
             table,
-            title=f"[bold]{prompt}[/bold]",
+            title=f"[bold]{title_line}[/bold]",
             border_style="cyan",
             padding=(1, 2)
         )
 
-    console.print()
     selected_key = None
 
     def run_selection_loop():
@@ -201,7 +214,7 @@ def is_project_initialized(project_path: Path) -> bool:
 
 
 def ask_user_confirmation(message: str, default: bool = False) -> bool:
-    """Ask user for confirmation with Rich styling
+    """Ask user for confirmation using arrow key selection
 
     Args:
         message: Confirmation message to display
@@ -210,46 +223,21 @@ def ask_user_confirmation(message: str, default: bool = False) -> bool:
     Returns:
         True if user confirms, False otherwise
     """
-    if HAS_RICH and console:
-        # Rich styled confirmation
-        from rich.panel import Panel
-
-        default_text = "[green](Y/n)[/green]" if default else "[red](y/N)[/red]"
-        panel = Panel(
-            f"{message}\n\n{default_text}",
-            title="[bold yellow]Confirmation Required[/bold yellow]",
-            border_style="yellow",
-            padding=(1, 2)
-        )
-
-        # Display panel
-        console.print(panel)
-
-        try:
-            response = input("Continue? ").strip().lower()
-
-            # Clear entire screen for clean display
-            console.clear()
-
-            if not response:
-                return default
-            return response in ['y', 'yes', 'true', '1']
-        except KeyboardInterrupt:
-            # Clear screen and show cancellation
-            console.clear()
-            console.print("[red]User interrupted.[/red]")
-            sys.exit(0)
+    # Create options for Yes/No selection
+    if default:
+        options = {"yes": "Continue and reinitialize", "no": "Cancel operation"}
+        default_key = "yes"
     else:
-        # Basic confirmation without Rich
-        default_text = "(Y/n)" if default else "(y/N)"
-        try:
-            response = input(f"{message} {default_text}: ").strip().lower()
-            if not response:
-                return default
-            return response in ['y', 'yes', 'true', '1']
-        except KeyboardInterrupt:
-            print("\n\033[91mUser interrupted.\033[0m")
-            sys.exit(0)
+        options = {"no": "Cancel operation", "yes": "Continue and reinitialize"}
+        default_key = "no"
+
+    # Use the existing selection UI with separate title and message
+    selected = select_with_arrows(options, f"Confirmation Required\n\n{message}", default_key)
+
+    if selected is None:  # User cancelled (Esc or Ctrl+C)
+        return False
+
+    return selected == "yes"
 
 
 def check_tool_installed(tool: str) -> bool:

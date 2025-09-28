@@ -1,5 +1,7 @@
 # Template-Driven Development Framework for AI-Augmented Coding
 
+![banner](misc/banner.png)
+
 🚧 **Work In Progress** - This framework is under active development
 
 ## Overview

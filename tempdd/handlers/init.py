@@ -1,11 +1,9 @@
 """Init command implementation."""
 
 from pathlib import Path
-import json
 import yaml
 import logging
 import sys
-from tempdd.utils import load_config as load_existing_config, process_template
 from tempdd.file_manager import FileManager
 from .ui_helpers import (
     select_with_arrows,
@@ -239,7 +237,9 @@ def show_success_summary(config_type: str, config_path: str, tool: str, language
         print(f"Stages: {stages_text}")
 
         print(COLOR_YELLOW + "\nNext steps:" + COLOR_END)
-        _print_next_steps_for_tool(tool)
+        steps_lines = _get_next_steps_for_tool(tool)
+        for step in steps_lines:
+            print(COLOR_YELLOW + step + COLOR_END)
 
 
 def _get_next_steps_for_tool(tool: str) -> list[str]:
@@ -273,27 +273,6 @@ def _get_next_steps_for_tool(tool: str) -> list[str]:
         ])
 
     return steps_lines
-
-
-def _print_next_steps_for_tool(tool: str) -> None:
-    """Print next steps instructions for a specific tool (plain text format)."""
-    file_manager = FileManager()
-    integration_config = file_manager.INTEGRATION_CONFIGS.get(tool)
-    if not integration_config:
-        return
-
-    if tool == "claude":
-        print(COLOR_YELLOW + "1. Execute `claude` to start Claude Code" + COLOR_END)
-        print(COLOR_YELLOW + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow." + COLOR_END)
-    elif tool == "gemini":
-        print(COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END)
-        print(COLOR_YELLOW + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow." + COLOR_END)
-    elif tool == "cursor":
-        print(COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END)
-        print(COLOR_YELLOW + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow." + COLOR_END)
-    elif tool == "copilot":
-        print(COLOR_YELLOW + "1. Open project in your IDE with GitHub Copilot installed" + COLOR_END)
-        print(COLOR_YELLOW + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow." + COLOR_END)
 
 
 def copy_workflow_directory(source_workflow_path: str, target_workflow_dir: Path, force: bool = False) -> bool:

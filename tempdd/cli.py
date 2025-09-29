@@ -39,16 +39,8 @@ Examples:
         help="Force initialization even if files already exist",
     )
     init_parser.add_argument(
-        "--tool",
-        help="Target tool for integration (if not specified, will prompt interactively)",
-    )
-    init_parser.add_argument(
-        "--language",
-        help="Language setting (if not specified, will prompt interactively)",
-    )
-    init_parser.add_argument(
-        "--config",
-        help="Path to configuration file (if not specified, will prompt interactively)",
+        "--workflow",
+        help="Path to workflow directory (e.g., customized/workflow_example). If contains config.yaml, will copy entire workflow without interactive mode.",
     )
 
     # AI command (replaces preprocess and agent)
@@ -110,9 +102,7 @@ def main() -> int:
         if args.command == "init":
             return init_command(
                 force=getattr(args, "force", False),
-                tool=getattr(args, "tool", None),
-                language=getattr(args, "language", None),
-                config_path=getattr(args, "config", None),
+                workflow_path=getattr(args, "workflow", None),
             )
         elif args.command == "ai":
             return ai_command(args.stage_action)

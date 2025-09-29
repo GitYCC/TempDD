@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 exclude = ["ENV*", "tests*"]
 
 [tool.setuptools.package-data]
-"tempdd.core.configs" = ["*.json"]
+"tempdd.core.configs" = ["*.yaml"]
 "tempdd.core.templates" = ["*.md"]
 "tempdd.integrations.claude" = [".claude/commands/*.md"]
 "tempdd.integrations.gemini" = [".gemini/commands/*.toml"]
@@ -15,7 +15,7 @@ exclude = ["ENV*", "tests*"]
 
 [project]
 name = "tempdd"
-version = "0.1.2"
+version = "0.1.3"
 description = "Template-Driven Development Framework for AI-Augmented Coding"
 authors = [{name = "Yi-Chang Chen"}]
 license = {text = "MIT"}

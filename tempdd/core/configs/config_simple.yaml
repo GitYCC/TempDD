@@ -1,0 +1,41 @@
+description: "Simple flow of software development, including PRD, Blueprint, Tasks stages."
+help: |
+  1. PRD (Product Requirements Document)
+     - Use '/tempdd-go prd build' to create product requirements
+
+  2. Blueprint Document
+     - Use '/tempdd-go blueprint build' to create implementation blueprint
+
+  3. Tasks Document & Implementation
+     - Use '/tempdd-go tasks build' to break down implementation tasks
+     - Use '/tempdd-go tasks run' to implement the planned tasks
+
+  Stage Actions:
+    build - Create/build the document for the stage
+    run   - Execute the implementation (for tasks stage)
+  
+  Each stage builds upon the previous one, creating a structured development workflow from requirements to implementation.
+
+language: en
+logging_level: WARNING
+stages:
+  - prd
+  - blueprint
+  - tasks
+
+define:
+  prd:
+    template: template_prd_default
+    input_symbols: null
+    output_symbol: PATH_PRD
+  blueprint:
+    template: template_blueprint_simple
+    input_symbols:
+      - PATH_PRD
+    output_symbol: PATH_BLUEPRINT
+  tasks:
+    template: template_tasks_simple
+    input_symbols:
+      - PATH_PRD
+      - PATH_BLUEPRINT
+    output_symbol: null

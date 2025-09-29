@@ -1,11 +1,9 @@
 """AI command implementation."""
 
 import sys
-import json
-import importlib
 import logging
 from pathlib import Path
-from tempdd.file_manager import FileManager
+from tempdd.controller import Controller
 
 
 # AI Instruction Templates
@@ -22,7 +20,7 @@ def format_ai_instruction(content: str) -> str:
 
 def _load_controller(config_path: str = None):
     """
-    Dynamically load Controller from configuration.
+    Load the unified Controller.
 
     Args:
         config_path: Optional path to configuration file
@@ -32,40 +30,8 @@ def _load_controller(config_path: str = None):
 
     Raises:
         FileNotFoundError: When configuration file is not found
-        ImportError: When controller module cannot be imported
     """
-    file_manager = FileManager()
-
-    if config_path:
-        config_file = Path(config_path)
-    else:
-        config_file = file_manager.get_project_config_path()
-
-    if config_file.exists():
-        with open(config_file, "r", encoding="utf-8") as f:
-            config = json.load(f)
-    else:
-        # Fallback to default config
-        default_config_path = (
-            Path(__file__).parent.parent / "core" / "configs" / "config_default.json"
-        )
-        if default_config_path.exists():
-            with open(default_config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-        else:
-            raise FileNotFoundError("No configuration file found")
-
-    # Get controller name from config
-    controller_name = config.get("controller", "controller_default")
-
-    # Dynamically import the controller
-    module_path = f"tempdd.core.controllers.{controller_name}"
-    try:
-        controller_module = importlib.import_module(module_path)
-        Controller = controller_module.Controller
-        return Controller(config_path)
-    except (ImportError, AttributeError) as e:
-        raise ImportError(f"Failed to import controller '{controller_name}': {e}")
+    return Controller(config_path)
 
 
 def ai_command(command_str: str) -> int:

@@ -68,9 +68,9 @@ class FileManager:
 
     def create_directory_structure(self, tool: str, force: bool = False) -> None:
         """Create directory structure for specified tool."""
-        # Create basic template directory
-        templates_dir = self.base_path / ".tempdd" / "templates"
-        templates_dir.mkdir(parents=True, exist_ok=True)
+        # Create .tempdd directory only
+        tempdd_dir = self.base_path / ".tempdd"
+        tempdd_dir.mkdir(parents=True, exist_ok=True)
 
         # Create tool-specific directory
         if tool in self.INTEGRATION_CONFIGS:
@@ -154,52 +154,24 @@ class FileManager:
             and file_path.exists()
         ]
 
-    def get_template_path(self, stage: str) -> Path:
-        """Get the template file path for a specific stage."""
-        return self.base_path / ".tempdd" / "templates" / f"template_{stage}.md"
 
     def get_project_config_path(self) -> Path:
-        """Get the project configuration file path."""
+        """Get the project configuration file path (deprecated - kept for compatibility)."""
         return self.base_path / ".tempdd" / "config.json"
+
+    def get_workflow_config_path(self) -> Path:
+        """Get the workflow configuration file path."""
+        return self.base_path / ".tempdd" / "workflow" / "config.yaml"
 
     def get_default_config_path(self) -> Path:
         """Get the default configuration file path."""
-        return self.get_core_path() / "configs" / "config_default.json"
+        return self.get_core_path() / "configs" / "config_default.yaml"
 
     def get_config_path(self, config_name: str) -> Path:
         """Get configuration file path by name."""
         return (
             self.get_default_config_path()
             if config_name == "default"
-            else self.get_core_path() / "configs" / f"config_{config_name}.json"
+            else self.get_core_path() / "configs" / f"config_{config_name}.yaml"
         )
 
-    def copy_template_from_core(
-        self, stage: str, template_name: str, force: bool = False
-    ) -> bool:
-        """Copy template from core to project templates directory."""
-        source_file = self.get_core_path() / "templates" / f"{template_name}.md"
-        target_file = self.get_template_path(stage)
-
-        if target_file.exists() and not force:
-            self.logger.info(
-                f"Template template_{stage}.md already exists, skipping..."
-            )
-            return False
-
-        if not source_file.exists():
-            self.logger.warning(f"Source template not found: {source_file}")
-            return False
-
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_file, target_file)
-        self.logger.info(f"Created template: .tempdd/templates/template_{stage}.md")
-        return True
-
-    def copy_templates_from_config(self, config: dict, force: bool = False) -> None:
-        """Copy template files based on configuration."""
-        self.logger.info("Creating templates from configuration...")
-
-        templates = config.get("templates", {})
-        for stage, template_name in templates.items():
-            self.copy_template_from_core(stage, template_name, force)

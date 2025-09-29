@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import json
+import yaml
 import logging
 import sys
 from tempdd.utils import load_config as load_existing_config, process_template
@@ -29,13 +30,13 @@ def get_available_configs() -> list[tuple[str, dict]]:
     configs_dir = file_manager.get_core_path() / "configs"
     config_files = []
 
-    for config_file in configs_dir.glob("config_*.json"):
+    for config_file in configs_dir.glob("config_*.yaml"):
         config_name = config_file.stem.replace("config_", "")
         try:
             with open(config_file, "r", encoding="utf-8") as f:
-                config_data = json.load(f)
+                config_data = yaml.safe_load(f)
             config_files.append((config_name, config_data))
-        except (json.JSONDecodeError, FileNotFoundError):
+        except (yaml.YAMLError, FileNotFoundError):
             continue
 
     # Sort configs to put "default" first
@@ -144,45 +145,226 @@ def prompt_language_input() -> str:
         return fallback_number_selection(language_options, "Enter preferred language:", "en")
 
 
+def update_config_template_paths(config: dict) -> dict:
+    """Update config template paths to point to local templates directory."""
+    import copy
+    updated_config = copy.deepcopy(config)
+
+    if "define" in updated_config:
+        for stage_name, stage_config in updated_config["define"].items():
+            if "template" in stage_config:
+                # Update template path to point to local templates
+                updated_config["define"][stage_name]["template"] = f"templates/{stage_name}.md"
+
+    return updated_config
+
+
+def copy_workflow_templates(file_manager: FileManager, config: dict, templates_dir: Path, force: bool) -> None:
+    """Copy templates from core templates to workflow templates directory."""
+    logger = logging.getLogger(__name__)
+    define_section = config.get("define", {})
+
+    for stage_name, stage_config in define_section.items():
+        template_name = stage_config.get("template")
+        if not template_name:
+            continue
+
+        # Source template path (from core templates)
+        source_template = file_manager.get_core_path() / "templates" / f"{template_name}.md"
+
+        # Target template path (stage name)
+        target_template = templates_dir / f"{stage_name}.md"
+
+        if not source_template.exists():
+            logger.warning(f"Template not found: {source_template}")
+            continue
+
+        if target_template.exists() and not force:
+            logger.info(f"Template already exists: {target_template}, skipping...")
+            continue
+
+        # Copy template content
+        with open(source_template, "r", encoding="utf-8") as src:
+            template_content = src.read()
+
+        with open(target_template, "w", encoding="utf-8") as dst:
+            dst.write(template_content)
+
+        logger.info(f"Copied template: {stage_name}.md")
+
+
+def show_success_summary(config_type: str, config_path: str, tool: str, language: str, config: dict) -> None:
+    """Show success summary with configuration details and next steps."""
+    # Get stages from config
+    stages = config.get("stages", [])
+    stages_text = ", ".join(stages) if stages else "None"
+
+    # Determine configuration display text
+    if config_type == "workflow":
+        config_display = "Customized configuration located in .tempdd/workflow/"
+    else:
+        config_display = config_path
+
+    if HAS_RICH and console:
+        console.print("\n[bold green]✓ TempDD project initialized successfully![/bold green]")
+
+        # Show configuration summary
+        from rich.panel import Panel
+
+        config_summary = f"Configuration: [cyan]{config_display}[/cyan]\nPlatform: [cyan]{tool}[/cyan]\nLanguage: [cyan]{language}[/cyan]\nStages: [cyan]{stages_text}[/cyan]"
+        summary_panel = Panel(
+            config_summary,
+            title="[bold]Project Configuration[/bold]",
+            border_style="blue",
+            padding=(1, 2)
+        )
+        console.print(summary_panel)
+
+        # Create next steps panel
+        steps_lines = _get_next_steps_for_tool(tool)
+        if steps_lines:
+            steps_panel = Panel(
+                "\n".join(steps_lines),
+                title="[bold]Next Steps[/bold]",
+                border_style="green",
+                padding=(1, 2)
+            )
+            console.print(steps_panel)
+    else:
+        # Fallback without Rich
+        print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
+        print(f"Configuration: {config_display}")
+        print(f"Platform: {tool}")
+        print(f"Language: {language}")
+        print(f"Stages: {stages_text}")
+
+        print(COLOR_YELLOW + "\nNext steps:" + COLOR_END)
+        _print_next_steps_for_tool(tool)
+
+
+def _get_next_steps_for_tool(tool: str) -> list[str]:
+    """Get next steps instructions for a specific tool (Rich format)."""
+    file_manager = FileManager()
+    integration_config = file_manager.INTEGRATION_CONFIGS.get(tool)
+    if not integration_config:
+        return []
+
+    steps_lines = ["1. Use [cyan]tempdd help[/cyan] to learn how to use the current flow first."]
+
+    if tool == "claude":
+        steps_lines.extend([
+            "2. Execute [cyan]claude[/cyan] to start Claude Code",
+            "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
+        ])
+    elif tool == "gemini":
+        steps_lines.extend([
+            "2. Execute [cyan]gemini[/cyan] to start Gemini CLI",
+            "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
+        ])
+    elif tool == "cursor":
+        steps_lines.extend([
+            "2. Execute [cyan]cursor .[/cyan] to start Cursor",
+            "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
+        ])
+    elif tool == "copilot":
+        steps_lines.extend([
+            "2. Open project in your IDE with GitHub Copilot installed",
+            "3. Use [cyan]#tempdd-go <stage> <action>[/cyan] to start running the workflow"
+        ])
+
+    return steps_lines
+
+
+def _print_next_steps_for_tool(tool: str) -> None:
+    """Print next steps instructions for a specific tool (plain text format)."""
+    file_manager = FileManager()
+    integration_config = file_manager.INTEGRATION_CONFIGS.get(tool)
+    if not integration_config:
+        return
+
+    if tool == "claude":
+        print(COLOR_YELLOW + "1. Execute `claude` to start Claude Code" + COLOR_END)
+        print(COLOR_YELLOW + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow." + COLOR_END)
+    elif tool == "gemini":
+        print(COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END)
+        print(COLOR_YELLOW + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow." + COLOR_END)
+    elif tool == "cursor":
+        print(COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END)
+        print(COLOR_YELLOW + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow." + COLOR_END)
+    elif tool == "copilot":
+        print(COLOR_YELLOW + "1. Open project in your IDE with GitHub Copilot installed" + COLOR_END)
+        print(COLOR_YELLOW + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow." + COLOR_END)
+
+
+def copy_workflow_directory(source_workflow_path: str, target_workflow_dir: Path, force: bool = False) -> bool:
+    """Copy entire workflow directory from source to target."""
+    import shutil
+    logger = logging.getLogger(__name__)
+
+    source_path = Path(source_workflow_path)
+    if not source_path.exists():
+        raise FileNotFoundError(f"Workflow path not found: {source_workflow_path}")
+
+    if not source_path.is_dir():
+        raise ValueError(f"Workflow path is not a directory: {source_workflow_path}")
+
+    # Check if source contains config.yaml
+    config_file = source_path / "config.yaml"
+    if not config_file.exists():
+        raise FileNotFoundError(f"config.yaml not found in workflow directory: {source_workflow_path}")
+
+    # Check if target already exists
+    if target_workflow_dir.exists():
+        if not force:
+            return False  # Don't copy, target already exists
+        else:
+            shutil.rmtree(target_workflow_dir)
+            logger.info(f"Removed existing workflow directory: {target_workflow_dir}")
+
+    # Copy the entire directory
+    shutil.copytree(source_path, target_workflow_dir)
+    logger.info(f"Copied workflow from {source_workflow_path} to {target_workflow_dir}")
+
+    return True
+
+
 def load_default_or_custom_config(config_path: str = None) -> dict:
     """Load configuration file, using default if not specified."""
     file_manager = FileManager()
 
     if config_path:
         if "/" in config_path:
-            # It's a file path - must have .json extension
-            if not config_path.endswith(".json"):
+            # It's a file path - must have .yaml extension
+            if not config_path.endswith(".yaml"):
                 raise ValueError(
-                    f"Config file path must have .json extension: {config_path}"
+                    f"Config file path must have .yaml extension: {config_path}"
                 )
             config_file = Path(config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_path}")
-        elif config_path.endswith(".json"):
-            # It's a .json file in current directory
+        elif config_path.endswith(".yaml"):
+            # It's a .yaml file in current directory
             config_file = Path(config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_path}")
         else:
             # Use as config name from configs directory
-            config_file = file_manager.get_config_path(config_path)
+            config_file = file_manager.get_core_path() / "configs" / f"config_{config_path}.yaml"
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_file}")
     else:
         # Use default config
-        config_file = file_manager.get_default_config_path()
+        config_file = file_manager.get_core_path() / "configs" / "config_default.yaml"
         if not config_file.exists():
             raise FileNotFoundError(f"Default config file not found: {config_file}")
 
     with open(config_file, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return yaml.safe_load(f)
 
 
 def init_command(
     force: bool = False,
-    tool: str = None,
-    language: str = None,
-    config_path: str = None,
+    workflow_path: str = None,
     interactive: bool = True,
 ) -> int:
     """Initialize a new TempDD project."""
@@ -195,15 +377,73 @@ def init_command(
 
     logger.info(f"Initializing TempDD project in: {current_path}")
 
+    # Check if workflow_path is provided (direct workflow copy mode)
+    if workflow_path:
+        return init_with_workflow_copy(current_path, workflow_path, force)
+
+    # Interactive mode - existing logic with tool and language prompts
+    return init_with_interactive_mode(current_path, force)
+
+
+def init_with_workflow_copy(current_path: Path, workflow_path: str, force: bool) -> int:
+    """Initialize project by copying an existing workflow directory."""
+    logger = logging.getLogger(__name__)
+    target_workflow_dir = current_path / ".tempdd" / "workflow"
+
+    try:
+        # Copy workflow directory
+        copied = copy_workflow_directory(workflow_path, target_workflow_dir, force)
+        if not copied:
+            logger.error(f"Workflow already exists at {target_workflow_dir}. Use --force to overwrite.")
+            return 1
+
+        # Create .tempdd directory
+        tempdd_dir = current_path / ".tempdd"
+        tempdd_dir.mkdir(exist_ok=True)
+
+        # Load config from copied workflow to get language
+        config_path = target_workflow_dir / "config.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        # Get language from workflow config
+        language = config.get("language", "en")
+
+        # Interactive tool selection
+        tool = prompt_platform_selection()
+        if tool is None:  # User cancelled
+            return 1
+
+        logger.info(f"Using tool: {tool}")
+        logger.info(f"Language: {language} (from workflow)")
+
+        # Create tool integration
+        file_manager = FileManager(current_path)
+        file_manager.copy_integration_file(tool, force)
+
+        # Show complete configuration summary using shared function
+        show_success_summary("workflow", "", tool, language, config)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to initialize project with workflow: {e}")
+        return 1
+
+
+def init_with_interactive_mode(current_path: Path, force: bool) -> int:
+    """Initialize project with interactive mode (existing logic)."""
+    logger = logging.getLogger(__name__)
+    interactive = True  # This is always interactive mode
+
     # Check if project is already initialized
     if is_project_initialized(current_path):
         if force:
             # Force flag provided, proceed without asking
-            if interactive:
-                if HAS_RICH and console:
-                    console.print("[yellow]⚠ Project already initialized. Force flag provided, proceeding...[/yellow]")
-                else:
-                    print("Warning: Project already initialized. Force flag provided, proceeding...")
+            if HAS_RICH and console:
+                console.print("[yellow]⚠ Project already initialized. Force flag provided, proceeding...[/yellow]")
+            else:
+                print("Warning: Project already initialized. Force flag provided, proceeding...")
         else:
             # Ask user for confirmation
             message = (
@@ -212,46 +452,26 @@ def init_command(
                 "Do you want to continue and reinitialize the project?"
             )
 
-            if interactive:
-                should_continue = ask_user_confirmation(message, default=False)
-                if not should_continue:
-                    if HAS_RICH and console:
-                        console.print("[blue]Initialization cancelled.[/blue]")
-                    else:
-                        print("Initialization cancelled.")
-                    return 0
+            should_continue = ask_user_confirmation(message, default=False)
+            if not should_continue:
+                if HAS_RICH and console:
+                    console.print("[blue]Initialization cancelled.[/blue]")
                 else:
-                    # User confirmed, continue with normal flow
-                    pass
-            else:
-                # Non-interactive mode: don't proceed without force flag
-                logger.error("Project already initialized. Use --force to reinitialize.")
-                return 1
+                    print("Initialization cancelled.")
+                return 0
 
-    # Interactive prompts if parameters not provided
-    if interactive:
-        if config_path is None:
-            config_path = prompt_config_selection()
-            if config_path is None:  # User cancelled
-                return 1
+    # Interactive prompts for config, tool, and language selection
+    config_path = prompt_config_selection()
+    if config_path is None:  # User cancelled
+        return 1
 
-        if tool is None:
-            tool = prompt_platform_selection()
-            if tool is None:  # User cancelled
-                return 1
+    tool = prompt_platform_selection()
+    if tool is None:  # User cancelled
+        return 1
 
-        if language is None:
-            language = prompt_language_input()
-            if language is None:  # User cancelled
-                return 1
-
-    # Set defaults if still None
-    if config_path is None:
-        config_path = "default"
-    if tool is None:
-        tool = "claude"
-    if language is None:
-        language = "en"
+    language = prompt_language_input()
+    if language is None:  # User cancelled
+        return 1
 
     logger.info(f"Using tool: {tool}")
     logger.info(f"Language: {language}")
@@ -261,145 +481,40 @@ def init_command(
         # 1. Load configuration first
         config = load_default_or_custom_config(config_path)
 
-        # Override language if specified
-        if language:
-            config["language"] = language
-
         # 2. Create basic directory structure and initialize project
         file_manager = FileManager(current_path)
         file_manager.create_directory_structure(tool, force)
 
-        # 3. Write config to ./.tempdd/config.json
-        target_config_path = file_manager.get_project_config_path()
-        if target_config_path.exists() and not force:
+        # 3. Create workflow directory structure
+        workflow_dir = current_path / ".tempdd" / "workflow"
+        templates_dir = workflow_dir / "templates"
+
+        workflow_dir.mkdir(exist_ok=True)
+        templates_dir.mkdir(exist_ok=True)
+        logger.info(f"Created workflow directory structure")
+
+        # 4. Copy templates to ./.tempdd/workflow/templates/ with stage names first
+        copy_workflow_templates(file_manager, config, templates_dir, force)
+
+        # 5. Update config template paths to point to local templates and write config
+        updated_config = update_config_template_paths(config)
+        # Update language setting from user selection
+        updated_config["language"] = language
+        workflow_config_path = workflow_dir / "config.yaml"
+        if workflow_config_path.exists() and not force:
             logger.info(
-                f"Config file already exists at {target_config_path}, skipping..."
+                f"Workflow config already exists at {workflow_config_path}, skipping..."
             )
         else:
-            with open(target_config_path, "w", encoding="utf-8") as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-            logger.info(f"Created config file: .tempdd/config.json")
+            with open(workflow_config_path, "w", encoding="utf-8") as f:
+                yaml.dump(updated_config, f, default_flow_style=False, indent=2, allow_unicode=True, sort_keys=False)
+            logger.info(f"Created workflow config: .tempdd/workflow/config.yaml")
 
-        # 4. Copy templates with new naming convention (template_{stage}.md)
-        file_manager.copy_templates_from_config(config, force)
-
-        # 5. Create tool integration
+        # 6. Create tool integration
         file_manager.copy_integration_file(tool, force)
 
-        # Show success message with Rich styling
-        if HAS_RICH and console:
-            console.print("\n[bold green]✓ TempDD project initialized successfully![/bold green]")
-
-            # Show configuration summary
-            from rich.panel import Panel
-
-            # Get stages from config
-            stages = config.get("stages", [])
-            stages_text = ", ".join(stages) if stages else "None"
-
-            config_summary = f"Configuration: [cyan]{config_path}[/cyan]\nPlatform: [cyan]{tool}[/cyan]\nLanguage: [cyan]{language}[/cyan]\nStages: [cyan]{stages_text}[/cyan]"
-            summary_panel = Panel(
-                config_summary,
-                title="[bold]Project Configuration[/bold]",
-                border_style="blue",
-                padding=(1, 2)
-            )
-            console.print(summary_panel)
-
-            # Create next steps panel
-            steps_lines = []
-            file_manager = FileManager()
-            config = file_manager.INTEGRATION_CONFIGS.get(tool)
-            if config:
-                steps_lines.append("1. Use [cyan]tempdd help[/cyan] to learn how to use the current flow first.")
-
-                if tool == "claude":
-                    steps_lines.extend([
-                        "2. Execute [cyan]claude[/cyan] to start Claude Code",
-                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
-                    ])
-                elif tool == "gemini":
-                    steps_lines.extend([
-                        "2. Execute [cyan]gemini[/cyan] to start Gemini CLI",
-                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
-                    ])
-                elif tool == "cursor":
-                    steps_lines.extend([
-                        "2. Execute [cyan]cursor .[/cyan] to start Cursor",
-                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
-                    ])
-                elif tool == "copilot":
-                    steps_lines.extend([
-                        "2. Open project in your IDE with GitHub Copilot installed",
-                        "3. Use [cyan]#tempdd-go <stage> <action>[/cyan] to start running the workflow"
-                    ])
-
-            if steps_lines:
-                from rich.panel import Panel
-                steps_panel = Panel(
-                    "\n".join(steps_lines),
-                    title="[bold]Next Steps[/bold]",
-                    border_style="green",
-                    padding=(1, 2)
-                )
-                console.print(steps_panel)
-        else:
-            # Fallback without Rich
-            print(COLOR_YELLOW + "\nTempDD project initialized successfully!" + COLOR_END)
-            print(f"Configuration: {config_path}")
-            print(f"Platform: {tool}")
-            print(f"Language: {language}")
-
-            # Get stages from config
-            stages = config.get("stages", [])
-            stages_text = ", ".join(stages) if stages else "None"
-            print(f"Stages: {stages_text}")
-
-            print(COLOR_YELLOW + "\nNext steps:" + COLOR_END)
-
-            file_manager = FileManager()
-            config = file_manager.INTEGRATION_CONFIGS.get(tool)
-            if config:
-                if tool == "claude":
-                    print(
-                        COLOR_YELLOW
-                        + "1. Execute `claude` to start Claude Code"
-                        + COLOR_END
-                    )
-                    print(
-                        COLOR_YELLOW
-                        + "2. Use '/tempdd-go help' command in Claude Code to learn how to use the current flow."
-                        + COLOR_END
-                    )
-                elif tool == "gemini":
-                    print(
-                        COLOR_YELLOW + "1. Execute `gemini` to start Gemini CLI" + COLOR_END
-                    )
-                    print(
-                        COLOR_YELLOW
-                        + "2. Use '/tempdd-go help' command in Gemini CLI to learn how to use the current flow."
-                        + COLOR_END
-                    )
-                elif tool == "cursor":
-                    print(
-                        COLOR_YELLOW + "1. Execute `cursor .` to start Cursor" + COLOR_END
-                    )
-                    print(
-                        COLOR_YELLOW
-                        + "2. Use 'Ctrl+K' then '/tempdd-go help' to learn how to use the current flow."
-                        + COLOR_END
-                    )
-                elif tool == "copilot":
-                    print(
-                        COLOR_YELLOW
-                        + "1. Open project in your IDE with GitHub Copilot installed"
-                        + COLOR_END
-                    )
-                    print(
-                        COLOR_YELLOW
-                        + "2. Use '#tempdd-go help' in your prompt to learn how to use the current flow."
-                        + COLOR_END
-                    )
+        # Show success message using shared function
+        show_success_summary("config", config_path, tool, language, updated_config)
         return 0
 
     except Exception as e:

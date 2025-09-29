@@ -2,8 +2,6 @@
 
 ![banner](misc/banner.png)
 
-🚧 **Work In Progress** - This framework is under active development
-
 ## Overview
 
 TempDD is a template-driven development framework that enables structured human-AI collaboration through customizable workflows and agent-guided template interactions. 

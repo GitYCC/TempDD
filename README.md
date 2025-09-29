@@ -2,7 +2,7 @@
 
 ![banner](misc/banner.png)
 
-**Read this in other languages:** [简体中文](docs/readmes/README-zh-CN.md) | [繁體中文](docs/readmes/README-zh-TW.md) | [Español](docs/readmes/README-es.md) | [日本語](docs/readmes/README-ja.md)
+**Read this in other languages:** [繁體中文](docs/readmes/README-zh-TW.md) | [简体中文](docs/readmes/README-zh-CN.md) | [Español](docs/readmes/README-es.md) | [日本語](docs/readmes/README-ja.md)
 
 ## Overview
 

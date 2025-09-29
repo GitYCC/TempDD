@@ -6,7 +6,9 @@
 
 ## Overview
 
-TempDD is a template-driven development framework designed to streamline AI-assisted coding workflows. 
+TempDD is a template-driven development framework that enables structured human-AI collaboration through customizable workflows and agent-guided template interactions. 
+
+As project complexity increases, AI Agents face challenges operating independently, making human-in-the-loop collaboration increasingly critical. Developers need effective tools to communicate with these black-box AI Agents. Template-driven approaches provide structured communication, reduce cognitive load, and enable consistent AI collaboration through guided workflows. This repository provides a framework that allows users to customize workflows according to their development projects, simplifying the process into a series of template-filling tasks. The framework incorporates agent mechanisms to reduce template complexity, enabling AI Agents to effectively assist users in completing documentation. We envision this framework being applicable across various development scenarios and even non-development contexts, while fostering open-source collaboration to integrate global knowledge.
 
 ## Features
 

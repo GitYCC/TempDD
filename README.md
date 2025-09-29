@@ -71,4 +71,30 @@ From this example, you can see that development progresses from idea to implemen
 
 ## Customize your workflow
 
+TempDD allows you to create custom workflows tailored to your specific development needs. 
 
+Follow the below steps to customize your workflow:
+1. **Read the guide**: See [./customized/](./customized/) for comprehensive workflow creation instructions
+2. **Create your workflow** following the structure and examples provided
+3. **Initialize project** with your custom workflow:
+
+```bash
+tempdd init --workflow /path/to/your/custom/workflow_dir/
+```
+
+## Cross-AI tool integration
+
+TempDD seamlessly integrates with multiple AI development tools:
+
+| AI Tool | Status |
+|---------|--------|
+| **Claude Code** | ✅ Full Support |
+| **Gemini CLI** | ✅ Full Support  |
+| **Cursor** | ✅ Full Support  |
+| **GitHub Copilot** | ✅ Full Support  |
+
+## Acknowledgments
+
+Thanks to the following repositories for inspiration:
+- [github/spec-kit](https://github.com/github/spec-kit)
+- [coleam00/context-engineering-intro](https://github.com/coleam00/context-engineering-intro)

@@ -80,6 +80,20 @@ Follow the below steps to customize your workflow:
 tempdd init --workflow /path/to/your/custom/workflow_dir/
 ```
 
+## Contributing Built-in Workflows
+
+We encourage contributors to help expand TempDD's built-in workflow collection! By contributing new workflows, you can help other developers benefit from proven development patterns and specialized domain workflows.
+
+### How to Contribute a New Built-in Workflow
+
+1. **Fork this repository** - Create your own fork to work on
+2. **Add your workflow files**:
+   - Add new configuration files to `./tempdd/core/configs/`
+   - Add corresponding templates to `./tempdd/core/templates/`
+3. **Submit a Pull Request** - Share your workflow with the community
+
+Your contributions will help make TempDD more valuable for developers across different domains and use cases. Whether it's a workflow for mobile development, data science, DevOps, or any other specialization, we welcome your expertise!
+
 ## Cross-AI tool integration
 
 TempDD seamlessly integrates with multiple AI development tools:

@@ -311,25 +311,27 @@ def init_command(
             file_manager = FileManager()
             config = file_manager.INTEGRATION_CONFIGS.get(tool)
             if config:
+                steps_lines.append("1. Use [cyan]tempdd help[/cyan] to learn how to use the current flow first.")
+
                 if tool == "claude":
                     steps_lines.extend([
-                        "1. Execute [cyan]claude[/cyan] to start Claude Code",
-                        "2. Use [cyan]/tempdd-go help[/cyan] command in Claude Code to learn how to use the current flow."
+                        "2. Execute [cyan]claude[/cyan] to start Claude Code",
+                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
                     ])
                 elif tool == "gemini":
                     steps_lines.extend([
-                        "1. Execute [cyan]gemini[/cyan] to start Gemini CLI",
-                        "2. Use [cyan]/tempdd-go help[/cyan] command in Gemini CLI to learn how to use the current flow."
+                        "2. Execute [cyan]gemini[/cyan] to start Gemini CLI",
+                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
                     ])
                 elif tool == "cursor":
                     steps_lines.extend([
-                        "1. Execute [cyan]cursor .[/cyan] to start Cursor",
-                        "2. Use [cyan]Ctrl+K[/cyan] then [cyan]/tempdd-go help[/cyan] to learn how to use the current flow."
+                        "2. Execute [cyan]cursor .[/cyan] to start Cursor",
+                        "3. Use [cyan]/tempdd-go <stage> <action>[/cyan] to start running the workflow"
                     ])
                 elif tool == "copilot":
                     steps_lines.extend([
-                        "1. Open project in your IDE with GitHub Copilot installed",
-                        "2. Use [cyan]#tempdd-go help[/cyan] in your prompt to learn how to use the current flow."
+                        "2. Open project in your IDE with GitHub Copilot installed",
+                        "3. Use [cyan]#tempdd-go <stage> <action>[/cyan] to start running the workflow"
                     ])
 
             if steps_lines:

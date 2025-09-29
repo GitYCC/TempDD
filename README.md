@@ -35,35 +35,40 @@ Create a new project directory and initialize TempDD:
 ```bash
 mkdir demo
 cd demo
-tempdd init
-
-claude # run Claude Code
+tempdd init  # You can choose the built-in workflow and preferred AI tool during initialization
 ```
 
-### 3. Use with Claude Code
+### 3. Example: Default Workflow with Claude Code
 
-Once in Claude Code, use these commands to build your project structure:
+The following example demonstrates using the default workflow with Claude Code. For detailed customization options and available workflows, refer to `tempdd help`.
+
+Once you enter Claude Code, execute the following commands in sequence:
 
 ```bash
-# Get help
+# Get help and understand available commands
 /tempdd-go help
 
 # Generate product requirements document
 /tempdd-go prd build
 
-# Create architecture design
+# After finishing the PRD, create architecture design
 /tempdd-go arch build
 
-# Conduct research
+# After finishing the architecture design document, conduct research
 /tempdd-go research build
 
-# Build implementation blueprint
+# After finishing the research report, build implementation blueprint
 /tempdd-go blueprint build
 
-# Generate task list
+# After finishing the blueprint, generate task list
 /tempdd-go tasks build
 
-# Execute tasks
+# After finishing the task list, execute tasks to generate the codes
 /tempdd-go tasks run
 ```
+
+From this example, you can see that development progresses from idea to implementation through multi-layered documentation. Each document is filled out by AI asking users for input when needed, which reduces the complexity of form-filling for users while enhancing consensus between AI and humans. Worth noting, the research step involves AI proactively searching for information online to improve its understanding of the implementation. I believe better workflows exist, and we shouldn't expect one workflow to satisfy every project. Therefore, this framework is designed to be easily customizable. Please refer to section ["Customize your workflow"](#customize-your-workflow) to learn more.
+
+## Customize your workflow
+
 

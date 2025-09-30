@@ -69,14 +69,16 @@ Once you enter Claude Code, execute the following commands in sequence:
 
 From this example, you can see that development progresses from idea to implementation through multi-layered documentation. Each document is filled out by AI asking users for input when needed, which reduces the complexity of form-filling for users while enhancing consensus between AI and humans. Worth noting, the research step involves AI proactively searching for information online to improve its understanding of the implementation. I believe better workflows exist, and we shouldn't expect one workflow to satisfy every project. Therefore, this framework is designed to be easily customizable. Please refer to section ["Customize your workflow"](#customize-your-workflow) to learn more.
 
+
 ## Customize your workflow
 
-TempDD allows you to create custom workflows tailored to your specific development needs. 
+TempDD allows you to create custom workflows tailored to your specific development needs. The framework's template-driven architecture makes customization straightforward—just define your stages in YAML and create corresponding templates.
 
 Follow the below steps to customize your workflow:
-1. **Read the guide**: See [./customized/](./customized/) for comprehensive workflow creation instructions
-2. **Create your workflow** following the structure and examples provided
-3. **Initialize project** with your custom workflow:
+1. **Understand the design**: Read [Operating Principles](docs/operating-principles.md) to learn how template-driven architecture enables easy customization
+2. **Read the guide**: See [./customized/](./customized/) for comprehensive workflow creation instructions
+3. **Create your workflow** following the structure and examples provided
+4. **Initialize project** with your custom workflow:
 
 ```bash
 tempdd init --workflow /path/to/your/custom/workflow_dir/
